@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Labyrinth</title>
+    <link rel="stylesheet" type="text/css" href="stylesheets/css/skeleton.css" media="screen" />
+    <!-- Lato font -->
+    <link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Lato:100,400,700' type='text/css'>
+</head>
+<body>
+
+<div id="info" class="info">
+    <p><img id="user-icon" src="images/user.png"/>
+        Shawn Kang
+    </p>
+</div>
+
+<div id="lab-doc" class="lab-doc">
+    <div id="question-modal" class="question-modal">
+        <div class="question-modal-content">
+            <span id="question-modal-close" class="question-modal-close">&times;</span>
+            <p><b>Checkpoint</b></p>
+            <p id="question-modal-desc">Write a function hello() that prints "Hello, world!" to the console.</p>
+            <p id="question-modal-testcases">
+                <b>Test cases</b>
+                <table>
+                    <tr>
+                        <th>#</th>
+                        <th>Input</th>
+                        <th>Output</th>
+                        <th>State</th>
+                    </tr>
+                    <tr>
+                        <td>1</td>
+                        <td>-</td>
+                        <td>string: 'Hello, world!'</td>
+                        <td><img id="modal-checkpoint1-testcase1-state-img" src="images/minus.png"/></td>
+                    </tr>
+                </table>
+            </p>
+            <p>
+                <b>Question</b>
+                <br>
+                <textarea id="question-modal-text" rows="4" id="question"></textarea>
+            </p>
+            <button id="question-modal-submit-btn">Submit</button>
+        </div>
+    </div>
+
+    <div id="question-notification-modal" class="notification-modal">
+        <div id="question-notification-modal-content" class="notification-modal-content">
+            <span id="question-notification-modal-close" class="notification-modal-close">&times;</span>
+            <div id="question-notification-modal-text">
+            </div>
+        </div>
+    </div>
+
+    <div id="checkpoint1" class="checkpoint-status-img">
+        <p><img id="checkpoint1-state-img" src="images/minus.png"/>
+            Write a function hello() that prints "Hello, world!" to the console.
+        </p>
+        <p>
+            <b>Test cases</b>
+            <table>
+                <tr>
+                    <th>#</th>
+                    <th>Input</th>
+                    <th>Output</th>
+                    <th>State</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>-</td>
+                    <td>string: 'Hello, world!'</td>
+                    <td><img id="checkpoint1-testcase1-state-img" src="images/minus.png"/></td>
+                </tr>
+            </table>
+        </p>
+        <p>
+            <button id="checkpoint1-question-btn">Ask a question</button>
+        </p>
+    </div>
+    <!--
+        <div id="checkpoint2" class="checkpoint-status-img">
+            <p><img id="checkpoint2-img" src="images/minus.png"/>
+                Write a function helloStr(str) that takes a string argument and prints "Hello, [str]!" to the console.
+            </p>
+            <p>
+                <b>Test cases</b>
+                <ul>
+                    <li>helloStr("Jim")</li>
+                    <li>helloStr("Mr. Troy")</li>
+                    <li>helloStr("Ms. Kim")</li>
+                </ul>
+            </p>
+            <p>
+                <button>Ask a question</button>
+            </p>
+        </div>
+    -->
+</div>
+
+<div id="code-button" class="code-button">
+    <button id="runBtn">Run</button>
+</div>
+
+<div id="editor" class="code-editor">
+</div>
+
+<div id="console">
+    
+</div>
+<script src="javascripts/jquery-3.1.1.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="javascripts/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="/socket.io/socket.io.js" type="text/javascript" charset="utf-8"></script>
+<script src="javascripts/controller.js" type="text/javascript" charset="utf-8"></script>
+</body>
+</html>
