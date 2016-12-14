@@ -82,7 +82,7 @@ class Lab {
 		this.questionNotificationModalContent = $('#question-notification-modal-content');
 		this.questionNotificationModalText = $('#question-notification-modal-text');
 		// TODO: This should be moved to somewhere else
-		this.socket = io.connect("http://127.0.0.1:3000");
+		this.socket = io.connect("https://labyrinth1.herokuapp.com");
 		this.init();
 	}
 
@@ -175,7 +175,7 @@ class EditorController {
 	constructor() {
 		this.runBtn = $('#runBtn');
 		this.editorObj = new EditorObj();
-		this.serverURL = "http://localhost:3000";
+		this.serverURL = "https://labyrinth1.herokuapp.com";
 
 		this.editorContent = '';
 		this.init();
