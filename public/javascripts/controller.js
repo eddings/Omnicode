@@ -175,7 +175,7 @@ class EditorController {
 	constructor() {
 		this.runBtn = $('#runBtn');
 		this.editorObj = new EditorObj();
-		this.serverURL = "https://labyrinth1.herokuapp.com";
+		this.serverURL = "http://localhost:3000";
 
 		this.editorContent = '';
 		this.init();
