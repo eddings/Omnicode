@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>{{title}}</title>
+    <!-- Lato font -->
+    <link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Lato:100,400,700' type='text/css'>
+</head>
+<body>
+<div>
+    {{#each questions}}
+        <p>{{question}}</p>
+        <table id="testCases">
+        	{{{testCases}}}
+        </table>
+        <button id="answer-btn{{@index}}">Answer</button>
+    {{/each}}
+</div>
+<script src="javascripts/jquery-3.1.1.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="/socket.io/socket.io.js" type="text/javascript" charset="utf-8"></script>
+<script src="javascripts/question-controller.js" type="text/javascript" charset="utf-8"></script>
+</body>
+</html>

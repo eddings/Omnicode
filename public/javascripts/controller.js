@@ -71,7 +71,7 @@ class Lab {
 		// Question Modal
 		this.questionModal = $('#question-modal');
 		this.questionModalClose = $('#question-modal-close');
-		this.questionModalDesc = $('#question-modal-desc');
+		this.questionModalCheckpoint = $('#question-modal-checkpoint');
 		this.questionModalTestCases = $('#question-modal-testcases');
 		this.questionModalText = $('#question-modal-text');
 		this.questionModalSubmitBtn = $('#question-modal-submit-btn');
@@ -81,13 +81,18 @@ class Lab {
 		this.questionNotificationModalClose = $('#question-notification-modal-close');
 		this.questionNotificationModalContent = $('#question-notification-modal-content');
 		this.questionNotificationModalText = $('#question-notification-modal-text');
+		this.questionNotificationModalAnswerBtn = $('#question-notification-modal-answer-btn');
+
+		//this.serverURL = "http://localhost:3000";
+		this.serverURL = "https://labyrinth1.herokuapp.com/";
+		//this.questionPOSTURL = "http://localhost:3000/question";
+		this.questionPOSTURL = "https://labyrinth1.herokuapp.com/question";
 		// TODO: This should be moved to somewhere else
-		this.socket = io.connect("https://labyrinth1.herokuapp.com");
+		this.socket = io.connect(this.serverURL);
 		this.init();
 	}
 
 	init() {
-		this.addQuestionBtnHandler();
 		this.addModalHandler();
 		// TODO: Move this to somewher else
 		this.socket.on('question', (msg) => {
@@ -107,7 +112,17 @@ class Lab {
 		});
 	}
 
-	addQuestionBtnHandler() {
+	addModalHandler() {
+		/* Dismiss the question modal when the background is clicked */
+		window.onclick = (e) => {
+			if (e.target.id === 'question-modal') {
+				this.questionModal.css('display', 'none');
+			} else if (e.target.id === 'question-notification-modal') {
+				// the notification modal dismisses naturally
+				//this.questionNotificationModal.css('display', 'none');
+			}
+		};
+
 		/* Question modal handling */
 		this.questionBtn.on("click", (e) => {
 			this.questionModal.css('display', 'block');
@@ -118,9 +133,24 @@ class Lab {
 		});
 
 		this.questionModalSubmitBtn.on("click", (e) => {
-			this.socket.emit('question', 'Shawn asks \n"' + this.questionModalText.val() + 
-				'"\n about checkpoint 1: ' + this.questionModalDesc.text() + 
-				' Would you like to help?');
+			var questionText = this.questionModalText.val();
+			var questionCheckpoint = this.questionModalCheckpoint.html();
+			var testCases = this.questionModalTestCases.html();
+			var msgString = 'Shawn asks \n"' + questionText + '"\n about checkpoint 1: ' + questionCheckpoint + '\n Would you like to help?';
+			
+			$.post({
+				url: this.questionPOSTURL,
+				data: {
+					question: msgString,
+					testCases: testCases
+				},
+				success: (data) => {
+					// do something
+				},
+				dataType: "text"
+			});
+
+			this.socket.emit('question', msgString);
 			this.questionModal.css('display', 'none');
 		});
 
@@ -129,16 +159,10 @@ class Lab {
 		this.questionNotificationModalClose.on("click", (e) => {
 			this.questionNotificationModal.css('display', 'none');
 		});
-	}
 
-	addModalHandler() {
-		window.onclick = (e) => {
-			if (e.target.id === 'question-modal') {
-				this.questionModal.css('display', 'none');
-			} else if (e.target.id === 'question-notification-modal') {
-				this.questionNotificationModal.css('display', 'none');
-			}
-		};
+		this.questionNotificationModalAnswerBtn.on("click", (e) => {
+
+		});
 	}
 
 	addCheckpoint(checkpoint) {
@@ -160,6 +184,7 @@ class EditorObj {
 		this.editor = ace.edit("editor"); // takes time
 		this.editor.setTheme("ace/theme/monokai");
 		this.editor.getSession().setMode("ace/mode/python");
+		this.editor.setShowPrintMargin(false); // vertical line at char 80
 	}
 
 	get code() {
@@ -175,8 +200,8 @@ class EditorController {
 	constructor() {
 		this.runBtn = $('#runBtn');
 		this.editorObj = new EditorObj();
-		this.serverURL = "http://localhost:3000";
-
+		//this.serverURL = "http://localhost:3000";
+		this.serverURL = "https://labyrinth1.herokuapp.com/";
 		this.editorContent = '';
 		this.init();
 

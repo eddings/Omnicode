@@ -6,9 +6,13 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var handlebars = require('express-handlebars');
 var lessMiddleware = require('less-middleware');
+var request = require('request');
+var cors = require('cors');
 
 var app = express();
 
+// CORS
+app.use(cors());
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'handlebars');
@@ -48,6 +52,9 @@ io.on("connection", function(socket) {
 
 var main = require('./routes/main')(io);
 app.use('/', main);
+
+var question = require('./routes/question')(io);
+app.use('/question', question);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<title>Labyrinth</title>
+<title>{{title}}</title>
     <link rel="stylesheet" type="text/css" href="stylesheets/css/skeleton.css" media="screen" />
     <!-- Lato font -->
     <link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Lato:100,400,700' type='text/css'>
@@ -10,7 +10,7 @@
 
 <div id="info" class="info">
     <p><img id="user-icon" src="images/user.png"/>
-        Shawn Kang
+        Shawn Kang <a href="/question">Question Board</a>
     </p>
 </div>
 
@@ -19,24 +19,22 @@
         <div class="question-modal-content">
             <span id="question-modal-close" class="question-modal-close">&times;</span>
             <p><b>Checkpoint</b></p>
-            <p id="question-modal-desc">Write a function hello() that prints "Hello, world!" to the console.</p>
-            <p id="question-modal-testcases">
-                <b>Test cases</b>
-                <table>
-                    <tr>
-                        <th>#</th>
-                        <th>Input</th>
-                        <th>Output</th>
-                        <th>State</th>
-                    </tr>
-                    <tr>
-                        <td>1</td>
-                        <td>-</td>
-                        <td>string: 'Hello, world!'</td>
-                        <td><img id="modal-checkpoint1-testcase1-state-img" src="images/minus.png"/></td>
-                    </tr>
-                </table>
-            </p>
+            <p id="question-modal-checkpoint">Write a function hello() that prints "Hello, world!" to the console.</p>
+            <p><b>Test cases</b></p>
+            <table id="question-modal-testcases">
+                <tr>
+                    <th>#</th>
+                    <th>Input</th>
+                    <th>Output</th>
+                    <th>State</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>-</td>
+                    <td>string: 'Hello, world!'</td>
+                    <td><img id="modal-checkpoint1-testcase1-state-img" src="images/error.png"/></td>
+                </tr>
+            </table>
             <p>
                 <b>Question</b>
                 <br>
@@ -51,6 +49,7 @@
             <span id="question-notification-modal-close" class="notification-modal-close">&times;</span>
             <div id="question-notification-modal-text">
             </div>
+            <button id="question-notification-modal-answer-btn">Answer</button>
         </div>
     </div>
 
