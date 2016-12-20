@@ -2,60 +2,151 @@
 <html lang="en">
 <head>
 <title>{{title}}</title>
-    <link rel="stylesheet" type="text/css" href="stylesheets/css/skeleton.css" media="screen" />
+    <link rel="shortcut icon" href="">
+    <link rel="stylesheet" type="text/css" href="../stylesheets/css/skeleton.css" media="screen" />
     <!-- Lato font -->
-    <link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Lato:100,400,700' type='text/css'>
+    <link rel="stylesheet" href='http://fonts.googleapis.com/css?family=Lato:100,200,300,400,500,600,700' type="text/css">
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css" type="text/css">
+    <!-- BootSideMenu -->
+    <link rel="stylesheet" href="../stylesheets/css/BootSideMenu.css" type="text/css">
 </head>
 <body>
 
+{{#unless loggedIn}}
+<!-- Login Modal -->
+<div id="login-modal" class="login-modal">
+    <div id="login-modal-content" class="login-modal-content">
+        <p><b>Login</b></p>
+        <table>
+            <tr>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+            <tr>
+                <td style="text-align: left;"><label for="user-name-login-input">User name</label></td>
+                <td><input id="user-name-login-input" name="user-name-login-input" type="text"></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td style="text-align: left;"><label for="user-pass-login-input">Password</label></td>
+                <td><input id="user-pass-login-input" name="user-pass-login-input" type="text"></td>
+                <td><button id="login-modal-login-btn">login</button></td>
+            </tr>
+        </table>
+        <p id="login-modal-login-status" style="display: inline; color: red"></p>
+        <a id="signup-link" href="#">If you're new, please sign up</a>
+        <br>
+        <a href="/">Go to the main page</a>
+    </div>
+    <div id="signup-modal-content" class="signup-modal-content" style="display: none;">
+        <p><b>Sign up</b></p>
+        <table>
+            <tr>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+            <tr>
+                <td style="text-align: left;"><label for="user-name-signup-input">User name</label></td>
+                <td><input id="user-name-signup-input" name="user-name-signup-input" type="text"></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td style="text-align: left;"><label for="user-pass1-signup-input">Password</label></td>
+                <td><input id="user-pass1-signup-input" name="user-pass1-signup-input" type="text"></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td style="text-align: left;"><label for="user-pass2-signup-input">Confirm your password</label></td>
+                <td><input id="user-pass2-signup-input" name="user-pass2-signup-input" type="text"></td>
+                <td><button id="login-modal-signup-btn">sign up</button></td>
+            </tr>
+        </table>
+        <p id="login-modal-signup-status" style="display: inline; color: red"></p>
+        <a id="login-link" href="#">Go back to logging in</a>
+        <br>
+        <a href="/">Go to the main page</a>
+    </div>
+</div>
+{{/unless}}
+
+<!-- Main navigation section; info div -->
 <div id="info" class="info">
-    <p><img id="user-icon" src="images/user.png"/>
-        Shawn Kang <a href="/question">Question Board</a>
+    <p style="display: inline;">
+        <p id="lab-lang" style="display: none;">{{language}}</p>
+        <a id="lab-id-link" href="/lab/{{labID}}?user={{user.userName}}&password={{user.password}}"><img id="lab-icon" src="../images/lab.png"/>{{labID}}</a>
+        {{#if loggedIn}}
+            <p id="user-name"><img id="user-icon" src="../images/user.png"/>{{user.userName}}</p>
+            <input type="hidden" id="user-password" value="{{user.password}}">
+            <a id="sign-out" href="/lab/{{labID}}">Sign out</a>
+        {{/if}}
+        <p><a href="/question/{{labID}}?user={{user.userName}}&password={{user.password}}"><img id="question-icon" src="../images/question.png"/>Question Board</a></p>
     </p>
 </div>
 
 <div id="lab-doc" class="lab-doc">
-    <div id="question-modal" class="question-modal">
+    <!-- Question Modal -->
+    {{#each labDoc.checkpoints}}
+    <div id="question-modal{{@index}}" class="question-modal">
         <div class="question-modal-content">
-            <span id="question-modal-close" class="question-modal-close">&times;</span>
+            <span id="question-modal-close{{@index}}" class="question-modal-close">&times;</span>
             <p><b>Checkpoint</b></p>
-            <p id="question-modal-checkpoint">Write a function hello() that prints "Hello, world!" to the console.</p>
+            <p id="question-modal-checkpoint{{@index}}">{{desc}}</p>
             <p><b>Test cases</b></p>
-            <table id="question-modal-testcases">
+            <table id="question-modal-testcases{{@index}}">
                 <tr>
                     <th>#</th>
                     <th>Input</th>
                     <th>Output</th>
                     <th>State</th>
                 </tr>
+                {{#each testCases}}
                 <tr>
-                    <td>1</td>
-                    <td>-</td>
-                    <td>string: 'Hello, world!'</td>
-                    <td><img id="modal-checkpoint1-testcase1-state-img" src="images/error.png"/></td>
+                    <td>{{@index}}</td>
+                    <td>{{inputType}}: {{input}}</td>
+                    <td>{{outputType}}: {{output}}</td>
+                    <!-- 'question' will be served at /question/intro_programming -->
+                    <td><img id="modal-checkpoint{{@../index}}-testcase{{@index}}-state-img" src="../images/error.png"/></td>
                 </tr>
+                {{/each}}
             </table>
             <p>
                 <b>Question</b>
                 <br>
-                <textarea id="question-modal-text" rows="4" id="question"></textarea>
+                <textarea id="question-modal-text{{@index}}" rows="4"></textarea>
             </p>
-            <button id="question-modal-submit-btn">Submit</button>
+            <button id="question-modal-submit-btn{{@index}}">Submit</button>
         </div>
     </div>
+    {{/each}}
 
+    <!-- Notification Modal -->
     <div id="question-notification-modal" class="notification-modal">
         <div id="question-notification-modal-content" class="notification-modal-content">
             <span id="question-notification-modal-close" class="notification-modal-close">&times;</span>
             <div id="question-notification-modal-text">
             </div>
-            <button id="question-notification-modal-answer-btn">Answer</button>
+            <input type="hidden" id="question-index">
+            <input type="hidden" id="checkpoint-index">
         </div>
     </div>
 
-    <div id="checkpoint1" class="checkpoint-status-img">
-        <p><img id="checkpoint1-state-img" src="images/minus.png"/>
-            Write a function hello() that prints "Hello, world!" to the console.
+    <!-- Notification modal for answers -->
+
+    <div id="answer-notification-modal" class="notification-modal">
+        <div id="answer-notification-modal-content" class="notification-modal-content">
+            <span id="answer-notification-modal-close" class="notification-modal-close">&times;</span>
+            <div id="answer-notification-modal-text">
+            </div>
+        </div>
+    </div>
+
+    {{#each labDoc.checkpoints}}
+    <div id="checkpoint{{@index}}" class="checkpoint-status-img">
+        <p><img id="checkpoint{{@index}}-state-img" src="../images/minus.png"/>
+            {{desc}}
         </p>
         <p>
             <b>Test cases</b>
@@ -66,18 +157,21 @@
                     <th>Output</th>
                     <th>State</th>
                 </tr>
+                {{#each testCases}}
                 <tr>
-                    <td>1</td>
-                    <td>-</td>
-                    <td>string: 'Hello, world!'</td>
-                    <td><img id="checkpoint1-testcase1-state-img" src="images/minus.png"/></td>
+                    <td>{{@index}}</td>
+                    <td>{{inputType}}: {{input}}</td>
+                    <td>{{outputType}}: {{output}}</td>
+                    <td><img id="checkpoint{{@../index}}-testcase{{@index}}-state-img" src="../images/minus.png"/></td>
                 </tr>
+                {{/each}}
             </table>
         </p>
         <p>
-            <button id="checkpoint1-question-btn">Ask a question</button>
+            <button type="submit" id="checkpoint{{@index}}-question-btn" class="btn btn-primary btn-sm">Ask a question</button>
         </p>
     </div>
+    {{/each}}
     <!--
         <div id="checkpoint2" class="checkpoint-status-img">
             <p><img id="checkpoint2-img" src="images/minus.png"/>
@@ -98,19 +192,43 @@
     -->
 </div>
 
-<div id="code-button" class="code-button">
-    <button id="runBtn">Run</button>
-</div>
-
 <div id="editor" class="code-editor">
 </div>
 
-<div id="console">
-    
+<div id="code-button" class="code-button">
+    <button type="submit" id="runBtn" class="btn btn-primary btn-sm">Run</button>
+    <button id="saveBtn" class="btn btn-primary btn-sm">Save</button>
+    <p id="editor-status" style="display: inline-block;"></p>
 </div>
-<script src="javascripts/jquery-3.1.1.min.js" type="text/javascript" charset="utf-8"></script>
-<script src="javascripts/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
-<script src="/socket.io/socket.io.js" type="text/javascript" charset="utf-8"></script>
-<script src="javascripts/controller.js" type="text/javascript" charset="utf-8"></script>
+
+<div id="console" class="console">
+    <p>Console</p>
+    {{#each user.console}}
+        <p class="console-content">{{this}}</p>
+    {{/each}}
+</div>
+
+<div id="side-menu">
+    <div class="list-group">
+        <div class="list-group-item" id="notifications-header">
+            Notifications
+        </div>
+        <div class="list-group-item" id="suggestions-header">
+            Suggestions
+        </div>
+    </div>
+</div>
+<!-- jQuery -->
+<script src="../javascripts/jquery-3.1.1.min.js" type="text/javascript" charset="utf-8"></script>
+<!-- Ace editor -->
+<script src="../javascripts/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<!-- Socket.io generated -->
+<script src="../socket.io/socket.io.js" type="text/javascript" charset="utf-8"></script>
+<!-- Custom controller code -->
+<script src="../javascripts/controller.js" type="text/javascript" charset="utf-8"></script>
+<!-- Bootstrap -->
+<script src="../bootstrap/js/bootstrap.min.js" type="text/javascript" charset="utf-8"></script>
+<!-- BootSideMenu -->
+<script src="../javascripts/BootSideMenu.js" type="text/javascript" charset="utf-8"></script>
 </body>
 </html>

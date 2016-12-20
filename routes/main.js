@@ -1,27 +1,249 @@
-module.exports = function(io) {
+module.exports = function(io, db) {
 	var express = require('express');
 	var router = express.Router();
 
-	router.get('/', function(req, res, next) {
-	  	res.render('main', { title: 'Labyrinth' });
+	// Commands
+	const runCmd 			= "run";
+	const saveCmd 			= "save";
+	const loginCmd			= "login";
+	const signupCmd 		= "signup";
+	const getUserCmd		= "getUser";
+	const searchLabIDsCmd	= "searchLabIDs";
+
+	// Questions for this lab
+	var questions = [];
+
+	function findUser(users, userName) {
+		var userIdx = -1;
+		users.forEach((user, idx) => {
+			if (user.userName === userName) {
+				userIdx = idx;
+			}
+		});
+		return userIdx;
+	}
+
+	// /lab/intro_programming?user=test&password=test
+	router.get('/:labID', (req, res, next) => {
+		var labID = req.params.labID;
+		var userName = req.query.user;
+		var password = req.query.password; 
+
+		db.find({labID: labID}, (err, docs) => {
+			if (err) {
+				console.log(err);
+				res.sendStatus(500);
+			} else {
+				if (docs.length !== 1) {
+					res.status(500).render('error',
+					{
+						title: 'Labyrinth - ' + labID,
+						errorMsg: "Something went wrong ... Please check the lab ID and the URL"
+					});
+				} else {
+					var loggedIn = false;
+					docs[0].users.forEach((user, idx) => {
+						if (user.userName === userName) {
+							loggedIn = user.password === password;
+						}
+					});
+				  	res.status(200).render(
+				  		'main',
+				  		{ 
+				  			title: 'Labyrinth - ' + labID,
+				  			labID: labID,
+				  			language: 'python',
+				  			labDoc: docs[0].labDoc,
+				  			loggedIn: loggedIn,
+				  			user: docs[0].users[findUser(docs[0].users, userName)]
+				  		}
+				  	);
+				}
+			}
+		});
 	});
 
-	router.post('/', function(req, res, next) {
-		var code = req.body.code;
-		var s = new require('stream').Readable();
-		const process = require('child_process').spawn('python');
+	router.post('/', (req, res, next) => {
+		var body = req.body;
 
-		// execute the code
-		s.push(code);
-		s.push(null);
-		s.pipe(process.stdin);
-		const chunks = [];
-		process.stdout.on('data', function(chunk) {
-			chunks.push(chunk);
-		});
-		process.stdout.on('end', function() {
-			res.send(Buffer.concat(chunks));
-		});
+		var command = body.command;
+
+		if (command === searchLabIDsCmd) {
+			var data = {labIDs: []};
+			db.find({}, (err, docs) => {
+				if (err) {
+					console.log(err);
+					res.sendStatus(500);
+				}
+
+				docs.forEach((doc, idx) => {
+					data.labIDs.push(doc.labID);
+				});
+
+				res.status(200).send(data);
+			});
+		}
+	});
+
+	router.post('/:labID', (req, res, next) => {
+		var body = req.body;
+
+		var labID = req.params.labID;
+		var command = body.command;
+
+		if (command === runCmd) {
+			var code = body.code;
+			var lang = body.language;
+			var s = new require('stream').Readable();
+			const process = require('child_process').spawn('python');
+
+			// execute the code
+			s.push(code);
+			s.push(null);
+			s.pipe(process.stdin);
+			const chunks = [];
+
+			process.stderr.on('data', (chunk) => {
+				chunks.push(chunk);
+			});
+
+			process.stdout.on('data', function(chunk) {
+				chunks.push(chunk);
+			});
+
+			process.stdout.on('end', () => {
+				res.status(200).send(Buffer.concat(chunks));
+			});
+		} else if (command === saveCmd) {
+			db.find({labID: labID}, (err, docs) => {
+				if (err) {
+					console.log(err);
+					res.sendStatus(500);
+				} else {
+					if (docs.length !== 1) {
+						console.log("Error, lab doc is not uniquified by labID");
+						res.render('error',
+						{
+							title: 'Labyrinth - ' + labID,
+							errorMsg: "Something went wrong ... Please check the lab ID and the URL"
+						});
+					} else {
+						var userName = body.userName;
+						var userIdx = findUser(docs[0].users, userName);
+						var password = docs[0].users[userIdx].password;
+						var role = docs[0].users[userIdx].role;
+						var checkpointStatus = body.checkpointStatus;
+						var code = body.code;
+						var consoleContents = body.consoleContents;
+						var notificationPaneContent = body.notificationPaneContent;
+
+						var userSearchQueryStr = 'users.' + userIdx;
+						var userStatusObj = {};
+						userStatusObj[userSearchQueryStr] = {
+							userName: userName,
+							password: password,
+							role: role,
+							checkpointStatus: checkpointStatus,
+							code: code,
+							console: consoleContents,
+							notificationPaneContent: notificationPaneContent
+						};
+
+						db.update({labID: labID}, {$set: userStatusObj}, {}, () => {});
+						res.sendStatus(200);
+					}
+				}
+			});
+		} else if (command === signupCmd) {
+			db.find({ labID: labID }, (err, docs) => {
+				if (err) {
+					console.log(err);
+					res.sendStatus(500);
+				} else {
+					if (docs.length !== 1) {
+						console.log("Error, lab doc is not uniquified by labID");
+						res.render('error',
+						{
+							title: 'Labyrinth - ' + labID,
+							errorMsg: "Something went wrong ... Please check the lab ID and the URL"
+						});
+					} else {
+						var userName = body.userName;
+						var userInDB = docs[0].users[findUser(docs[0].users, userName)];
+						if (!userInDB) {
+							var newUser = {
+								userName: userName,
+								password: body.password,
+								role: body.role,
+								checkpointStatus: body.checkpointStatus,
+								code: body.code,
+								recommendationPaneContent: body.recommendationPaneContent
+							};
+							db.update({labID: labID}, {$push: {users: newUser}}, {}, () => {});
+
+							res.status(200).send({ok: true}); // THIS IS WEIRD! IT SENDS A STRING <-- because I set dataType: "text" ... SMH
+						} else {
+							res.status(200).send({ok: false, reason: "User name already exists"});
+						}
+					}
+				}
+			});
+		} else if (command === loginCmd) {
+			var userName = body.userName;
+			db.find({ labID: labID }, (err, docs) => {
+				if (err) {
+					console.log(err);
+					res.sendStatus(500);
+				} else {
+					if (docs.length !== 1) {
+						console.log("Error, lab doc is not uniquified by labID");
+						res.status(500).render('error',
+						{
+							title: 'Labyrinth - ' + labID,
+							errorMsg: "Something went wrong ... Please check the lab ID and the URL"
+						});
+					} else {
+						var userInDB = docs[0].users[findUser(docs[0].users, userName)];
+						if (userInDB) {
+							if (userInDB.password === body.password) {
+								res.status(200).send({ok: true, userData: userInDB});
+							} else {
+								res.status(200).send({ok: false, reason: "Password doesn't match"});
+							}
+						} else {
+							res.status(200).send({ok: false, reason: "User name doesn't exist"});
+						}
+					}
+				}
+			});
+		} else if (command === getUserCmd) {
+			var userName = body.userName;
+			db.find({labID: labID}, (err, docs) => {
+				if (err) {
+					console.log(err);
+					res.sendStatus(500);
+				} else {
+					if (docs.length !== 1) {
+						console.log("Error, lab doc is not uniquified by labID");
+						res.status(500).render('error',
+						{
+							title: 'Labyrinth - ' + labID,
+							errorMsg: "Something went wrong ... Please check the lab ID and the URL"
+						});
+					} else {
+						var userInDB = docs[0].users[findUser(docs[0].users, userName)];
+						if (userInDB) {
+							res.status(200).send({ok: true, userData: userInDB});
+						} else {
+							res.status(200).send({ok: false, reason: "User name doesn't exist"});
+						}
+					}
+				}
+			});
+		} else {
+			console.log("Unsupported command");
+		}
+
 	});
 
 	return router;

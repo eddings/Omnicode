@@ -1,19 +1,20 @@
-p {
+p, small {
 	font-family: 'Lato', sans-serif;
-	font-weight: 100;
+	font-weight: 300;
 }
 
 ul {
 	font-family: 'Lato', sans-serif;
-	font-weight: 100;	
+	font-weight: 300;	
 }
 
 table, tr, td, th, td {
 	text-align: center;
 	font-family: 'Lato', sans-serif;
-	font-weight: 100;	
+	font-weight: 300;	
 }
 
+/* Lab page skeleton */
 .right-pane {
 	position: absolute;
 	width: 50vw;
@@ -23,32 +24,69 @@ table, tr, td, th, td {
 
 .left-pane {
 	position: absolute;
-	width: 47vw;
-	margin-left: 1.5vw;
-	margin-right: 1.5vw;
+    width: 50vw;
 }
 
 .lab-doc {
-	.left-pane;
-	top: 40px;
+    .left-pane;
+	top: 60px;
 }
 
 .info {
+    .left-pane;
 	font-family: 'Lato', sans-serif;
-	font-weight: 100;
-	.left-pane;
+	font-weight: 300;
+    top: 8px;
+    display: inline-block;
 }
 
-.code-editor {
-	.right-pane;
-	top: 20px;
-	bottom: 20vh;
-	height: 80vh;
+#user-name {
+    display: inline;
 }
 
-.code-button {
-	.right-pane;
-	top: 0;
+/* Small height screens */
+@media screen and (min-height: 400px), screen and (max-height: 550px) {
+    .code-editor {
+        .right-pane;
+        top: 0;
+        bottom: 175px;
+        height: ~"calc(100vh - 205px)";
+    }
+    .console {
+        .right-pane;
+        top: ~"calc(100vh - 155px)";
+        height: 155px;
+        overflow-y: scroll;
+    }
+    .code-button {
+        .right-pane;
+        top: ~"calc(100vh - 185px - 10px)";
+        height: 20px;
+    }
+}
+
+/* Large height screens */
+@media screen and (min-height: 550px) {
+    .code-editor {
+        .right-pane;
+        top: 0;
+        bottom: 220px;
+        height: ~"calc(100vh - 250px)";
+    }
+    .console {
+        .right-pane;
+        top: ~"calc(100vh - 200px)";
+        height: 180px;
+        overflow-y: scroll;
+    }
+    .code-button {
+        .right-pane;
+        top: ~"calc(100vh - 230px - 10px)";
+        height: 20px;
+    }
+}
+
+.console-content {
 }
 
 .checkpoint-status-img img, .checkpoint-status-img div {
@@ -141,4 +179,97 @@ table, tr, td, th, td {
     color: #000;
     text-decoration: none;
     cursor: pointer;
+}
+
+/* Modal for inputting user name */
+/* Background */
+.login-modal {
+    display: block; /* The first thing to be shown */
+    position: fixed; /* Stay in place */
+    z-index: 100; /* Sit on top */
+    padding-top: 100px; /* Location of the box */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.login-modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+}
+
+.signup-modal-content {
+    .login-modal-content;
+}
+
+.login-modal-close:hover,
+.login-modal-close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Question board */
+.question-board {
+    padding-top: 60px;
+}
+
+.question-invisible {
+    display: none;
+}
+
+.question-visible {
+    display: block;
+    margin: 0 auto;
+}
+
+.div-question-detail {
+    display: none;
+}
+
+.answer-visible {
+    margin-left: 50px;
+}
+
+.answer-invisible {
+    margin-left: 50px;
+    display: none;
+}
+
+/* Entry page */
+.center {
+    position: relative;
+    display: block;
+    margin: 35vh 0 0 0;
+    text-align: center;
+}
+
+.entry-body {
+    background-image: url('../../images/lab.jpeg');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: right top;
+}
+
+.logo {
+    font-size: 50pt;
+    font-weight: 400;
+    /* color: rgb(150,150,150); */
+}
+
+.labs-label {
+    color: rgb(255,255,255);
+}
+ 
+#labs {
+    width: 350px;
+    border-radius: 5px;
 }

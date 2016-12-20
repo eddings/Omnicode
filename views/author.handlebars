@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>{{title}}</title>
+	<link rel="shortcut icon" href="">
+	<link rel="stylesheet" type="text/css" href="../stylesheets/css/skeleton.css" media="screen" />
+    <!-- Lato font -->
+    <link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Lato:100,400,700' type='text/css'>
+</head>
+<body>
+{{#unless authorLoggedIn}}
+<!-- Login Modal -->
+<div id="author-login-modal" class="login-modal">
+    <div class="author-login-modal-content">
+        <p><b>If you know the lab ID, please enter</b></p>
+        <input id="existing-labID-input" name="existing-labID-input" type="text">
+        <button id="existing-labID-btn">login</button>
+        <p id="existing-labID-status" style="display: inline; color: red"></p>
+        <small style="display: block;">If you want to create a lab, please enter a new lab ID and an author user name</small>
+        <input id="new-labID-input" name="new-labID-input" type="text">
+        <input id="new-labID-author-input" name="new-labID-author-input" type="text">
+        <button id="new-labID-btn">create</button>
+        <p id="new-labID-status" style="display: inline; color: red"></p>
+    </div>
+</div>
+{{/unless}}
+<div id="info" class="info">
+    <p style="display: inline;">
+        <a href="/lab/{{labID}}?user={{user.userName}}">{{labID}}</a>
+        <img id="user-icon" src="images/user.png"/>
+        {{#if authorLoggedIn}}
+        <p style="display: inline;" id="user-name">{{user.userName}}</p>
+        {{/if}}
+        <a href="/question/{{labID}}?user={{user.userName}}">Question Board</a>
+    </p>
+</div>
+</body>
+</html>
