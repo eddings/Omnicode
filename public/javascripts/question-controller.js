@@ -407,5 +407,5 @@ class QBController {
 }
 
 $(document).ready(function() {
-	var qbCtrl = new QBController();
+	var qbCtrl = new QBController("https://labyrinth1.herokuapp.com");
 });

@@ -544,7 +544,7 @@ class Lab {
 
 class EditorController {
 	constructor() {
-		this.serverURL = "http://localhost:3000";
+		this.serverURL = "https://labyrinth1.herokuapp.com";
 		this.init();
 		// Lab-related; this should be in the authoring environment
 		var c1 = new Checkpoint();

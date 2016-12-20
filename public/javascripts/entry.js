@@ -1,6 +1,6 @@
 class EntryController {
     constructor() {
-        this.serverURL = 'http://localhost:3000';
+        this.serverURL = 'https://labyrinth1.herokuapp.com';
         this.labURL = this.serverURL + '/lab';
 
         this.searchLabIDsCmd = 'searchLabIDs';
