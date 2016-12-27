@@ -80,7 +80,7 @@ class EditorObj {
 }
 
 class Lab {
-	constructor(checkpoints = [], serverURL = "http://localhost:3000") {
+	constructor(checkpoints = [], serverURL) {
 		this.labID = $('#lab-id-link').text(); // Lab ID
 		this.labLanguage = $('#lab-lang').text(); // Lab programming language
 		this.userName = $('#user-name').text(); // Current user name
@@ -581,6 +581,6 @@ class EditorController {
 }
 
 $(document).ready(function() {
-	var editorCtrl = new EditorController("http://localhost:3000");
+	var editorCtrl = new EditorController();
 });
 

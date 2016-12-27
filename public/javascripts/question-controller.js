@@ -1,5 +1,5 @@
 class QBController {
-	constructor(serverURL = 'http://localhost:3000') {
+	constructor(serverURL = 'https://labyrinth1.herokuapp.com') {
 		this.labID = $('#lab-id-link').text(); // Lab ID
 		this.labLanguage = $('#lab-lang').text(); // Lab programming language
 		this.userName = $('#user-name').text(); // Current user name
@@ -408,6 +408,5 @@ class QBController {
 }
 
 $(document).ready(function() {
-	//var qbCtrl = new qbCtrl("https://labyrinth1.herokuapp.com");
-	var qbCtrl = new QBController("http://localhost:3000");
+	var qbCtrl = new QBController();
 });
