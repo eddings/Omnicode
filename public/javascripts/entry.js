@@ -1,6 +1,6 @@
 class EntryController {
-    constructor() {
-        this.serverURL = 'https://labyrinth1.herokuapp.com';
+    constructor(serverURL = "https://labyrinth1.herokuapp.com") {
+        this.serverURL = serverURL;
         this.labURL = this.serverURL + '/lab';
 
         this.searchLabIDsCmd = 'searchLabIDs';
@@ -74,5 +74,5 @@ class EntryController {
 }
 
 $(document).ready(function() {
-    var ctrl = new EntryController();
+    var ctrl = new EntryController("http://localhost:3000");
 });

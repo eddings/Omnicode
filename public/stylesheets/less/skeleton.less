@@ -17,14 +17,15 @@ table, tr, td, th, td {
 /* Lab page skeleton */
 .right-pane {
 	position: absolute;
-	width: 50vw;
 	left: 50vw;
-	right: 0;
+	right: 10px;
+    width: ~"calc(50vw - 18px)";
 }
 
 .left-pane {
 	position: absolute;
-    width: 50vw;
+    left: 10px;
+    width: ~"calc(50vw - 10px)";
 }
 
 .lab-doc {
@@ -244,6 +245,10 @@ table, tr, td, th, td {
     display: none;
 }
 
+.testCase-div {
+    display: none;
+}
+
 /* Entry page */
 .center {
     position: relative;
@@ -253,7 +258,7 @@ table, tr, td, th, td {
 }
 
 .entry-body {
-    background-image: url('../../images/lab.jpeg');
+    /* background-image: url('../../images/lab.jpeg'); */
     background-repeat: no-repeat;
     background-size: cover;
     background-position: right top;
@@ -266,7 +271,7 @@ table, tr, td, th, td {
 }
 
 .labs-label {
-    color: rgb(255,255,255);
+    /* color: rgb(255,255,255); */
 }
  
 #labs {

@@ -5,7 +5,7 @@
     <link rel="shortcut icon" href="">
     <link rel="stylesheet" type="text/css" href="../stylesheets/css/skeleton.css" media="screen" />
     <!-- Lato font -->
-    <link rel="stylesheet" href='http://fonts.googleapis.com/css?family=Lato:100,200,300,400,500,600,700' type="text/css">
+    <link rel="stylesheet" href='https://fonts.googleapis.com/css?family=Lato:100,200,300,400,500,600,700' type="text/css">
     <!-- Bootstrap -->
     <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css" type="text/css">
     <!-- BootSideMenu -->
@@ -122,7 +122,7 @@
     </div>
     {{/each}}
 
-    <!-- Notification Modal -->
+    <!-- Notification Modal for Quetsions -->
     <div id="question-notification-modal" class="notification-modal">
         <div id="question-notification-modal-content" class="notification-modal-content">
             <span id="question-notification-modal-close" class="notification-modal-close">&times;</span>
@@ -133,8 +133,7 @@
         </div>
     </div>
 
-    <!-- Notification modal for answers -->
-
+    <!-- Notification Modal for Answers -->
     <div id="answer-notification-modal" class="notification-modal">
         <div id="answer-notification-modal-content" class="notification-modal-content">
             <span id="answer-notification-modal-close" class="notification-modal-close">&times;</span>
@@ -143,16 +142,56 @@
         </div>
     </div>
 
+    <!-- Lab description -->
+    <div id="lab-desc" class="lab-desc">
+        <p>{{{labDoc.labDesc}}}</p>
+    </div>
+
+    <!-- Checkpoints -->
     {{#each labDoc.checkpoints}}
     <div id="checkpoint{{@index}}" class="checkpoint-status-img">
+        <p style="text-align: center;"><b>{{title}}</b><p>
         <p><img id="checkpoint{{@index}}-state-img" src="../images/minus.png"/>
-            {{desc}}
+            {{{desc}}}
         </p>
+        {{#if commandBlocks.length}}
         <p>
-            <b>Test cases</b>
+            <b>Commands</b>
             <table>
                 <tr>
                     <th>#</th>
+                    <th>Commands</th>
+                    <th>State</th>
+                </tr>
+                {{#each commandBlocks}}
+                <tr>
+                    <td>{{@index}}</td>
+                    <td>{{{commands}}}</td>
+                    <td><img id="checkpoint{{@../index}}-command{{@index}}-state-img" src="../images/minus.png"/></td>
+                </tr>
+                {{/each}}
+            </table>
+        </p>
+        {{/if}}
+        {{#if testCases.length}}
+        <p>
+            <b>Test Cases</b>
+            {{#each testCases}}
+            <img id="state-img-checkpoint{{@../index}}-testcase{{@index}}" src="../images/minus.png"/>
+            <span id="span-checkpoint{{@../index}}-testcase{{@index}}" class="glyphicon glyphicon-chevron-down"></span>
+            <div id="div-checkpoint{{@../index}}-testcase{{@index}}" class="testCase-div">
+                <button id="runBtn-checkpoint{{@../index}}-testcase{{@index}}" class="btn btn-primary btn-sm">Run</button>
+                <pre>
+                    {{commands}}
+                </pre>
+            </div>
+            <br>
+            {{/each}}
+            <!--
+            <table>
+                <tr>
+                    <th>#</th>
+                    <th>Function</th>
                     <th>Input</th>
                     <th>Output</th>
                     <th>State</th>
@@ -160,47 +199,36 @@
                 {{#each testCases}}
                 <tr>
                     <td>{{@index}}</td>
+                    <td>{{function}}</td>
                     <td>{{inputType}}: {{input}}</td>
                     <td>{{outputType}}: {{output}}</td>
                     <td><img id="checkpoint{{@../index}}-testcase{{@index}}-state-img" src="../images/minus.png"/></td>
                 </tr>
                 {{/each}}
             </table>
+            -->
+
         </p>
+        {{/if}}
         <p>
             <button type="submit" id="checkpoint{{@index}}-question-btn" class="btn btn-primary btn-sm">Ask a question</button>
         </p>
     </div>
     {{/each}}
-    <!--
-        <div id="checkpoint2" class="checkpoint-status-img">
-            <p><img id="checkpoint2-img" src="images/minus.png"/>
-                Write a function helloStr(str) that takes a string argument and prints "Hello, [str]!" to the console.
-            </p>
-            <p>
-                <b>Test cases</b>
-                <ul>
-                    <li>helloStr("Jim")</li>
-                    <li>helloStr("Mr. Troy")</li>
-                    <li>helloStr("Ms. Kim")</li>
-                </ul>
-            </p>
-            <p>
-                <button>Ask a question</button>
-            </p>
-        </div>
-    -->
 </div>
 
+<!-- Code Editor -->
 <div id="editor" class="code-editor">
 </div>
 
+<!-- Code Editor Controls -->
 <div id="code-button" class="code-button">
-    <button type="submit" id="runBtn" class="btn btn-primary btn-sm">Run</button>
+    <button id="runBtn" class="btn btn-primary btn-sm">Run</button>
     <button id="saveBtn" class="btn btn-primary btn-sm">Save</button>
     <p id="editor-status" style="display: inline-block;"></p>
 </div>
 
+<!-- Console -->
 <div id="console" class="console">
     <p>Console</p>
     {{#each user.console}}
@@ -208,6 +236,7 @@
     {{/each}}
 </div>
 
+<!-- Side Menu Panel -->
 <div id="side-menu">
     <div class="list-group">
         <div class="list-group-item" id="notifications-header">
@@ -218,6 +247,7 @@
         </div>
     </div>
 </div>
+
 <!-- jQuery -->
 <script src="../javascripts/jquery-3.1.1.min.js" type="text/javascript" charset="utf-8"></script>
 <!-- Ace editor -->

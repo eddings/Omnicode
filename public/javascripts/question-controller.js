@@ -286,9 +286,10 @@ class QBController {
 		});
 
 		this.questionSocket.on('answer-posted', (answerObj) => {
+			console.log(answerObj);
 			var questionIdx = answerObj.questionIdx;
 			var answer = answerObj.answer;
-			this.answerDivs[questionIdx].prepend('\
+			this.answerDivs[questionIdx].append('\
 			<div id="answer' + questionIdx + this.numAnswers[questionIdx] + '" class="answer-invisible">\
                 <p><img src="../images/user.png"/><u>' + this.userName + '</u> answered</p>\
                 <p id="p-answer' + questionIdx + this.numAnswers[questionIdx] + '">' + answer + '</p>\
@@ -407,5 +408,6 @@ class QBController {
 }
 
 $(document).ready(function() {
-	var qbCtrl = new QBController("https://labyrinth1.herokuapp.com");
+	//var qbCtrl = new qbCtrl("https://labyrinth1.herokuapp.com");
+	var qbCtrl = new QBController("http://localhost:3000");
 });

@@ -39,6 +39,7 @@
             },
             onStartup: function () {
                 //code to be executed when the plugin is called
+                closeMenu();
             }
         };
 

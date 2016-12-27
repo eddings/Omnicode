@@ -80,7 +80,7 @@ class EditorObj {
 }
 
 class Lab {
-	constructor(checkpoints, serverURL = "http://localhost:3000") {
+	constructor(checkpoints = [], serverURL = "http://localhost:3000") {
 		this.labID = $('#lab-id-link').text(); // Lab ID
 		this.labLanguage = $('#lab-lang').text(); // Lab programming language
 		this.userName = $('#user-name').text(); // Current user name
@@ -89,6 +89,9 @@ class Lab {
 		this.checkpoints = checkpoints; // Array of checkpoints
 		this.questionBtns = []; // Question Buttons
 		this.questionModals = []; // Question Modal
+
+		// Test Case Spans
+		this.testCaseSpans = [];
 
 		// Notification modal
 		this.questionNotificationModal = $('#question-notification-modal');
@@ -120,7 +123,7 @@ class Lab {
 		this.signupLink = $('#signup-link');
 		this.loginLink = $('#login-link');
 
-		// Buttons
+		// Code Editor Control Buttons
 		this.runBtn = $('#runBtn');
 		this.saveBtn = $('#saveBtn');
 
@@ -133,9 +136,6 @@ class Lab {
 
 		// Console
 		this.console = $('#console');
-
-		// Lab checkpoints
-		this.checkpoints = checkpoints;
 
 		// Side menu
 		this.sideMenu = $('#side-menu');
@@ -182,9 +182,16 @@ class Lab {
 		});		
 	}
 
+	collectTestCaseSpans() {
+		$("span[id^='span-checkpoint']").each((i, el) => {
+			this.testCaseSpans.push($(el));
+		});
+	}
+
 	init() {
 		this.collectQuestionBtns();
 		this.collectQuestionModals();
+		this.collectTestCaseSpans();
 
 		this.addModalHandlers();
 		this.addBtnHandlers();
@@ -194,7 +201,8 @@ class Lab {
 
 		// Initialize the side menu using the library function
 		this.sideMenu.BootSideMenu({
-			pushBody: false
+			pushBody: false,
+			width: "200px"
 		});
 
 		// Initialize the user status
@@ -420,11 +428,11 @@ class Lab {
 					var output = this.checkpoints[0].testCases[0].output;
 					var res = data.toString('utf-8').trim();
 					if (output === res) {
-						$('#checkpoint0-state-img').attr('src', '../images/success.png');
-						$('#checkpoint0-testcase0-state-img').attr('src', '../images/success.png');
+						$('#state-img-checkpoint0').attr('src', '../images/success.png');
+						$('#state-img-checkpoint0-testcase0').attr('src', '../images/success.png');
 					} else {
-						$('#checkpoint0-state-img').attr('src', '../images/error.png');
-						$('#checkpoint0-testcase0-state-img').attr('src', '../images/error.png');
+						$('#state-img-checkpoint0').attr('src', '../images/error.png');
+						$('#state-img-checkpoint0-testcase0').attr('src', '../images/error.png');
 					}
 					this.console.append('<p class="console-content">>' + res + '</p>');
 				},
@@ -438,7 +446,6 @@ class Lab {
 	}
 
 	addSaveBtnHandler() {
-
 		this.saveBtn.on("click", (e) => {
 			var URL = this.labURL + '/' + this.labID;
 			var consoleContents = [];
@@ -481,6 +488,20 @@ class Lab {
 		});
 	}
 
+	addTestCaseSpanHandlers() {
+		this.testCaseSpans.forEach((span, idx) => {
+			span.on('click', (e) => {
+				if ($("#div-checkpoint1-testcase0").css('display') === 'none') {
+					$("#div-checkpoint1-testcase0").fadeIn();
+					span.attr('class', 'glyphicon glyphicon-chevron-up');
+				} else {
+					$("#div-checkpoint1-testcase0").fadeOut();
+					span.attr('class', 'glyphicon glyphicon-chevron-down');					
+				}
+			});
+		});
+	}
+
 	// currently no-use
 	addEditorContentChangeEventHandler() {
 		this.editorObj.editor.getSession().on('change', function() {
@@ -491,6 +512,7 @@ class Lab {
 	addBtnHandlers() {
 		this.addRunBtnHandler();
 		this.addSaveBtnHandler();
+		this.addTestCaseSpanHandlers();
 	}
 
 	addModalHandlers() {
@@ -543,8 +565,8 @@ class Lab {
 }
 
 class EditorController {
-	constructor() {
-		this.serverURL = "https://labyrinth1.herokuapp.com";
+	constructor(serverURL = "https://labyrinth1.herokuapp.com") {
+		this.serverURL = serverURL;
 		this.init();
 		// Lab-related; this should be in the authoring environment
 		var c1 = new Checkpoint();
@@ -559,6 +581,6 @@ class EditorController {
 }
 
 $(document).ready(function() {
-	var editorCtrl = new EditorController();
+	var editorCtrl = new EditorController("http://localhost:3000");
 });
 
