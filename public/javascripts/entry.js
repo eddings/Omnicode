@@ -74,5 +74,5 @@ class EntryController {
 }
 
 $(document).ready(function() {
-    var ctrl = new EntryController("http://localhost:3000");
+    var ctrl = new EntryController();
 });
