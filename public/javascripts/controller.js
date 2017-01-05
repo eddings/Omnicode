@@ -1,3 +1,5 @@
+"use strict";
+
 class TestCase {
 	constructor(input, output) {
 		this.test = {
@@ -62,12 +64,158 @@ class Checkpoint {
 	}
 }
 
+class RightClickController {
+	constructor(editorObj) {
+		this.editor = editorObj.editor;
+		this.contextMenu = null;
+		this.contextMenuPos = null;
+		this.windowWidth = -1;
+		this.windowHeight = -1;
+		this.clickCoords = null;
+		this.clickCoordsX = -1;
+		this.clickCoordsY = -1;
+
+		this.isContextMenuVisible = false;
+		this.activeClassName = "context-menu--active";
+		this.askQuestionMenuID = "menu-ask-a-question";
+		this.init();
+	}
+
+	init() {
+		this.collectContextMenu();
+		this.addContextListener();
+		this.addKeyUpListner();
+	}
+
+	collectContextMenu() {
+		this.contextMenu = $("#context-menu");
+	}
+
+	addContextListener() {
+		/* IE >= 9 */
+		document.addEventListener("contextmenu", (e) => {
+			e.preventDefault();
+			this.toggleMenuOn();
+			this.positionMenu(e);
+		});
+
+		document.addEventListener("click", (e) => {
+			var button = e.which || e.button;
+			if (button === 1) {
+				this.toggleMenuOff();
+				if (e.target.id === this.askQuestionMenuID) {
+					/* Assumes that the user selected an appropriate block of code */
+					var textBlock = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
+					this.sendQuestionRequest(textBlock);
+				}
+			} else {
+				this.toggleMenuOff();
+			}
+			return true;
+		});
+	}
+
+	addKeyUpListner() {
+		/* Remove the context menu on pressing the ESC key */
+		window.onkeyup = (e) => {
+			if (e.keyCode === 27) {
+				this.toggleMenuOff();
+			}
+		};
+	}
+
+	toggleMenuOn() {
+		if (!this.isContextMenuVisible) {
+			this.isContextMenuVisible = true;
+			this.contextMenu.addClass(this.activeClassName);
+		}
+	}
+
+	toggleMenuOff() {
+		if (this.isContextMenuVisible) {
+			this.isContextMenuVisible = false;
+			this.contextMenu.removeClass(this.activeClassName);
+		}
+	}
+
+	getPosition(e) {
+		var posx = 0;
+		var posy = 0;
+
+		if (!e) { var e = window.event; }
+
+		if (e.pageX || e.pageY) {
+			posx = e.pageX;
+			posy = e.pageY;
+		} else if (e.clientX || e.clientY) {
+			posx = e.clientX + document.body.scrollLeft + 
+					document.documentElement.scrollLeft;
+			posy = e.clientY + document.body.scrollTop + 
+					document.documentElement.scrollTop;
+		}
+		return {
+			x: posx,
+			y: posy
+		}
+	}
+
+	positionMenu(e) {
+		this.clickCoords = this.getPosition(e);
+		this.clickCoordsX = this.clickCoords.x;
+		this.clickCoordsY = this.clickCoords.y;
+
+		this.contextMenuWidth = this.contextMenu.width() + 4;
+		this.contextMenuHeight = this.contextMenu.height() + 4;
+
+		this.windowWidth = window.innerWidth;
+		this.windowHeight = window.innerHeight;
+
+		var styleStr = '';
+
+		if ((this.windowWidth - this.clickCoordsX) < this.contextMenuWidth) {
+			styleStr += "left: " + (this.windowWidth - this.contextMenuWidth) + "px;";
+		} else {
+			styleStr += "left: " + this.clickCoordsX + "px;";
+		}
+
+		if ((this.windowHeight - this.clickCoordsY) < this.contextMenuHeight) {
+			styleStr += "top: " + (this.windowHeight - this.contextMenuHeight) + "px;";
+		} else {
+			styleStr += "top: " + this.clickCoordsY + "px;";
+		}
+
+		this.contextMenu.attr("style", styleStr);
+	}
+
+	sendQuestionRequest(textBlock) {
+		console.log(textBlock);
+		/*
+		$.post(
+		{
+			url: URL,
+			data: JSON.stringify(dataObj),
+			success: (questionObj, status) => {
+				// Send the message to a subset of people based on the result of AST analysis
+				this.questionSocket.emit('question', questionObj); // Transfer the question in 'data'
+				obj.questionModal.css('display', 'none');
+			},
+			error: (req, status, err) => {
+				console.log(err);
+			},
+			dataType: "json",
+			contentType: 'application/json'
+		});
+		*/
+	}
+}
+
 class EditorObj {
 	constructor() {
 		this.editor = ace.edit("editor"); // takes time
-		this.editor.setTheme("ace/theme/monokai");
+		//this.editor.setTheme("ace/theme/terminal");
 		this.editor.getSession().setMode("ace/mode/python");
 		this.editor.setShowPrintMargin(false); // vertical line at char 80
+		this.editor.$blockScrolling = Infinity; // remove scrolling warnings
 	}
 
 	get code() {
@@ -178,8 +326,8 @@ class Lab {
 				questionModalText: $('#question-modal-text' + i),
 				questionModalSubmitBtn: $('#question-modal-submit-btn' + i),
 				questionModalCloseBtn: $('#question-modal-close' + i)
-			})
-		});		
+			});
+		});     
 	}
 
 	collectTestCaseSpans() {
@@ -213,18 +361,18 @@ class Lab {
 		this.labSocket.on('question', (data) => {
 			this.questionNotificationModal.css('display', 'inline');
 			var content = '<b>' + data.questioner + '</b> asked<br>"' + data.question + '"';
-			this.questionNotificationModalText.html('<p>' + content + '</p>');		
+			this.questionNotificationModalText.html('<p>' + content + '</p>');      
 			setTimeout(() => {
 				this.questionNotificationModal.fadeOut();
 			}, 6000);
-		});		
+		});     
 	}
 
 	addAnswerNotificationHandler() {
 		this.labSocket.on('answer-posted', (data) => {
 			this.answerNotificationModal.css('display', 'inline');
 			var content = '<b>' + data.answerer + '</b> answered<br>"' + data.answer + '"<br> to your question';
-			this.answerNotificationModalText.html('<p>' + content + '</p>');		
+			this.answerNotificationModalText.html('<p>' + content + '</p>');        
 			setTimeout(() => {
 				this.answerNotificationModal.fadeOut();
 			}, 6000);
@@ -264,7 +412,7 @@ class Lab {
 
 			obj.questionModalCloseBtn.on("click", (e) => {
 				obj.questionModal.css('display', 'none');
-			})
+			});
 		});
 	}
 
@@ -360,13 +508,13 @@ class Lab {
 							},
 							dataType: "json",
 							contentType: 'application/json'
-						});	
+						}); 
 					} else {
 						this.loginModalSignupStatus.html("Passwords do not match");
 					}
 				} else {
 					this.loginModalSignupStatus.html("Please enter a password");
-				}		
+				}       
 			} else {
 				this.loginModalSignupStatus.html("Please enter a user name");
 			}
@@ -408,8 +556,8 @@ class Lab {
 				if (e.target.id === obj.questionModal.attr('id')) {
 					obj.questionModal.css('display', 'none');
 				}
-			};	
-		});	
+			};  
+		}); 
 	}
 
 	addRunBtnHandler() {
@@ -468,11 +616,11 @@ class Lab {
 				success: (data) => {
 					var currentdate = new Date(); 
 					var savedAt = "Last saved at: " + currentdate.getDate() + "/"
-					                + (currentdate.getMonth()+1)  + "/" 
-					                + currentdate.getFullYear() + " @ "  
-					                + currentdate.getHours() + ":"  
-					                + currentdate.getMinutes() + ":" 
-					                + currentdate.getSeconds();
+									+ (currentdate.getMonth()+1)  + "/" 
+									+ currentdate.getFullYear() + " @ "  
+									+ currentdate.getHours() + ":"  
+									+ currentdate.getMinutes() + ":" 
+									+ currentdate.getSeconds();
 					this.editorStatus.text(savedAt);
 					this.editorStatus.css('display', 'inline');
 					setTimeout(() => {
@@ -496,7 +644,7 @@ class Lab {
 					span.attr('class', 'glyphicon glyphicon-chevron-up');
 				} else {
 					$("#div-checkpoint1-testcase0").fadeOut();
-					span.attr('class', 'glyphicon glyphicon-chevron-down');					
+					span.attr('class', 'glyphicon glyphicon-chevron-down');                 
 				}
 			});
 		});
@@ -581,6 +729,7 @@ class EditorController {
 }
 
 $(document).ready(function() {
-	var editorCtrl = new EditorController();
+	var editorCtrl = new EditorController("http://localhost:3000");
+	var rightClickCtrl = new RightClickController(editorCtrl.lab.editorObj);
 });
 

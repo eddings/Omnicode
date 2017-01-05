@@ -408,5 +408,5 @@ class QBController {
 }
 
 $(document).ready(function() {
-	var qbCtrl = new QBController();
+	var qbCtrl = new QBController("http://localhost:3000");
 });
