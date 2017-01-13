@@ -7,9 +7,6 @@ class QBController {
 		this.labURL = serverURL + '/lab';
 		this.questionURL = serverURL + '/question';
 
-		this.answerCmd = "answer";
-		this.loginCmd = "login";
-
 		var queryStr = 'labID=' + this.labID + '&userName=' + this.userName;
 		this.labSocket = io.connect(this.labURL, { query: queryStr });
 		this.questionSocket = io.connect(this.questionURL, { query: queryStr });
@@ -205,7 +202,7 @@ class QBController {
 		var questionIdx = this.numQuestions-1;
 		if (this.answerInputs[idx].val() !== '') {
 			var dataObj = {
-				command: this.answerCmd,
+				command: ANSWER_COMMAND,
 				userName: this.userName,
 				answer: this.answerInputs[idx].val(),
 				checkpointIdx: this.checkpointIdxInputs[idx].val(),
@@ -310,7 +307,7 @@ class QBController {
 			if (userName) {
 				var password = this.loginModalLoginPass.val();
 				var dataObj = {
-					command: this.loginCmd,
+					command: LOGIN_COMMAND,
 					userName: userName,
 					password: this.loginModalLoginPass.val()
 				};
@@ -350,7 +347,7 @@ class QBController {
 				if (pass1) {
 					if (pass1 === pass2) {
 						var userDataObj = {
-							command: this.signupCmd,
+							command: SIGNUP_COMMAND,
 							userName: userName,
 							password: pass1,
 							role: 'student',

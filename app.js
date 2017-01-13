@@ -34,10 +34,10 @@ app.use(cookieParser());
 app.use(lessMiddleware(path.join(__dirname, 'public', 'stylesheets', 'less'), 
 {
     preprocess: {
-    // TODO: Backslash or forward slash?
-    path: function(pathname, req) {
-        return pathname.replace(/\\stylesheets\\css\\/, '\\');
-    }
+        // TODO: Backslash or forward slash?
+        path: function(pathname, req) {
+            return pathname.replace(/\\stylesheets\\css\\/, '\\');
+        }
     },
     dest: path.join(__dirname, 'public'),
     force: true,
@@ -49,7 +49,7 @@ fs.readFile('testCases.py', 'utf8', (err, data) => {
     if (err) {
         return console.log(err);
     }
-    var ckpt2_testCase = data;
+    var ckpt1_testCase = data;
     fs.readFile('skeleton.py', 'utf8', (err, data) => {
         var skeletonCode = data;
         // DB Initialization with a test lab doc
@@ -71,24 +71,8 @@ fs.readFile('testCases.py', 'utf8', (err, data) => {
         "Your instructor will record that you did it. Remember, despite the demands of the online " +
         "system, labs are graded on effort, not correctness.";
 
-        var ckpt1_title = "List Expressions and Commands";
-        var ckpt1_desc = "The first part of the lab will take place in the Python interactive prompt, much like the first two " +
-        "labs. You do not need to create a module. First, execute the following assignment statement:<br>" +
-        "lablist = ['H','e','l','l','o',' ','W','o','r','l','d','!']<br>" +
-        "Like a string, this is a list of individual characters. Unlike a string, however, the contents of this " +
-        "list can be changed. This makes lists a very important data type.<br>" + 
-        "Enter the following statements <b>in the order they are presented</b>. Many of the commands " +
-        "below are always type in expressions, Python will immediately display the value; the commands " +
-        "below are all followed by a print statement showing the new contents of the list. Unlike previous labs, we are not asking you to guess the " +
-        "output beforehand.";
-        /*
-        var ckpt2_desc = "This next table is similar to those from previous labs. The commands and expressions in the first " +
-        "column are missing something, represented by a box. That something may be a literal, a variable, " +
-        "or a method name. The second column displays the output. You need to fill in the box to give the " +
-        "desired output. If you are confused, go back and look at your answers on the previous page.";
-        */
-        var ckpt2_title = "List Functions";
-        var ckpt2_desc = "On the next two pages are several function specifications; implement them. The stubs for these " +
+        var ckpt1_title = "List Functions";
+        var ckpt1_desc = "On the next two pages are several function specifications; implement them. The stubs for these " +
         "functions are in the editor. You will need to use for-loops to implement them. In addition, " +
         "we have already provided you with test cases. So all you need to do is implement " +
         "the functions." +
@@ -115,129 +99,11 @@ fs.readFile('testCases.py', 'utf8', (err, data) => {
                     {
                         title: ckpt1_title,
                         desc: ckpt1_desc,
-                        commandBlocks: [
-                            {
-                                commands: 'lablist.remove(\'o\')<br>print lablist'
-                            },
-                            {
-                                commands: 'lablist.remove(\'x\')'
-                            },
-                            {
-                                commands: 'pos = lablist.index(\'o\')<br>print pos'
-                            },
-                            {
-                                commands: 'pos = lablist.index(\'B\')'
-                            },
-                            {
-                                commands: 'lablist[0] = \'J\'<br>print lablist'
-                            },
-                            {
-                                commands: 'lablist.insert(4,\'o\')<br>print lablist'
-                            },
-                            {
-                                commands: 's = lablist[:]<br>print s'
-                            },
-                            {
-                                commands: 's[0] = \'C\'<br>print s<br>print lablist'
-                            },
-                            {
-                                commands: 'a = \'-\'.join(s)<br>print a'
-                            },
-                            {
-                                commands: 'a = \'\'.join(s)<br>print a'
-                            },
-                            {
-                                commands: 't = list(a)<br>print t'
-                            }
-                        ],
-                        testCases: [],
-                        questions: [
-                            {
-                                questioner: "test",
-                                question: 'How do you print text in Python?',
-                                answers: [
-                                    {
-                                        answerer: "asdf",
-                                        answer: "You can use 'print'. So something like 'print \"print this string\"'"
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        title: ckpt2_title,
-                        desc: ckpt2_desc,
                         commandBlocks: [],
                         testCases: [
                             {
-                                commands: ckpt2_testCase
+                                commands: ckpt1_testCase
                             }
-                            /*
-                            {
-                                function: 'lesser_than',
-                                input: '[5, 9, 5, 7, 3, 10, 4], 4',
-                                inputType: 'list, int',
-                                output: '1',
-                                outputType: 'int'
-                            },
-                            {
-                                function: 'lesser_than',
-                                input: '[5, 9, 5, 7, 3, 10, 4], 3',
-                                inputType: 'list, int',
-                                output: '0',
-                                outputType: 'int'
-                            },
-                            {
-                                function: 'lesser_than',
-                                input: '[5, 9, 5, 7, 3, 10, 4], 6',
-                                inputType: 'list, int',
-                                output: '4',
-                                outputType: 'int'
-                            },
-                            {
-                                function: 'lesser_than',
-                                input: '[5, 9, 5, 7, 3, 10, 4], 10',
-                                inputType: 'list, int',
-                                output: '6',
-                                outputType: 'int'
-                            },
-                            {
-                                function: 'lesser_than',
-                                input: '[5, 9, 5, 7, 3, 10, 4], 20',
-                                inputType: 'list, int',
-                                output: '7',
-                                outputType: 'int'
-                            },
-                            {
-                                function: 'uniques',
-                                input: '[5, 9, 5, 7]',
-                                inputType: 'list',
-                                output: '7',
-                                outputType: 'int'
-                            },
-                            {
-                                function: 'uniques',
-                                input: '[5, 5, 1, \'a\', 5, \'a\']',
-                                inputType: 'list',
-                                output: '7',
-                                outputType: 'int'
-                            },
-                            {
-                                function: 'uniques',
-                                input: '[1, 2, 3, 4, 5]',
-                                inputType: 'list',
-                                output: '7',
-                                outputType: 'int'
-                            },
-                            {
-                                function: 'uniques',
-                                input: '[]',
-                                inputType: 'list',
-                                output: '7',
-                                outputType: 'int'
-                            },
-                            */
-                            /* Test cases that test for internal function behavior */
                         ],
                         quetsions: []
                     }
@@ -250,7 +116,16 @@ fs.readFile('testCases.py', 'utf8', (err, data) => {
                     role: "student",
                     checkpointStatus: {},
                     code: skeletonCode,
-                    console: [],
+                    codeEdits: [],
+                    console: {
+                        content: '',
+                        history: [],
+                    },
+                    debugger: {
+                        debugTraces: [],
+                        handlePosition: 0,
+                        highlightedStr: ''
+                    },
                     notificationPaneContent: {}
                 },
                 {
@@ -259,7 +134,16 @@ fs.readFile('testCases.py', 'utf8', (err, data) => {
                     role: "student",
                     checkpointStatus: {},
                     code: skeletonCode,
-                    console: [],
+                    codeEdits: [],
+                    console: {
+                        content: '',
+                        history: [],
+                    },
+                    debugger: {
+                        debugTraces: [],
+                        handlePosition: 0,
+                        highlightedStr: ''
+                    },
                     notificationPaneContent: {}
                 }
             ],
@@ -365,8 +249,13 @@ io.of(questionBoardURL).on('connection', (socket) => {
         // so that the client javascript can live-update the question page
         for (var name in socGroups[labID]) {
             socGroups[labID][name].question.emit('question', data); // notify everyone on the question board
-            if (name !== userName) {
-                // notify everyone (ideally anyone who might be interested) but the questioner
+            if (data.targetUsers) {
+                data.targetUsers.forEach((userName, idx) => {
+                    if (name !== userName) {
+                        socGroups[labID][userName].lab.emit('question', data);
+                    }
+                });
+            } else {
                 socGroups[labID][name].lab.emit('question', data);
             }
         }

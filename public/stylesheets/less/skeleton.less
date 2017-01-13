@@ -25,7 +25,8 @@ table, tr, td, th, td {
 .left-pane {
 	position: absolute;
     left: 10px;
-    width: ~"calc(50vw - 10px)";
+    right: 20px;
+    width: ~"calc(50vw - 30px)";
 }
 
 .lab-doc {
@@ -45,6 +46,43 @@ table, tr, td, th, td {
     display: inline;
 }
 
+/* Console */
+/* Uses a pre element to create a console. When used with Bootstrap, their different styling conflicts */
+/* The inner console element. */
+.jqconsole {
+    padding: 10px;
+}
+/* The cursor. */
+.jqconsole-cursor {
+    background-color: gray;
+}
+/* The cursor color when the console looses focus. */
+.jqconsole-blurred .jqconsole-cursor {
+    background-color: #666;
+}
+/* The current prompt text color */
+.jqconsole-prompt {
+    color: #000;
+}
+/* The command history */
+.jqconsole-old-prompt {
+    color: #808080;
+    font-weight: normal;
+}
+/* The text color when in input mode. */
+.jqconsole-input {
+    color: #000;
+}
+/* Previously entered input. */
+.jqconsole-old-input {
+    color: #808080;
+    font-weight: normal;
+}
+/* The text color of the output. */
+.jqconsole-output {
+    color: #808080;
+}
+
 /* Small height screens */
 @media screen and (min-height: 400px), screen and (max-height: 550px) {
     .code-editor {
@@ -53,16 +91,39 @@ table, tr, td, th, td {
         bottom: 175px;
         height: ~"calc(100vh - 205px)";
     }
-    .console {
-        .right-pane;
-        top: ~"calc(100vh - 155px)";
-        height: 155px;
-        overflow-y: scroll;
-    }
     .code-button {
         .right-pane;
         top: ~"calc(100vh - 185px - 10px)";
         height: 20px;
+    }
+    #console {
+        .right-pane;
+        top: ~"calc(100vh - 155px)";
+        height: 145px;
+    }
+    #console-clear {
+        .right-pane;
+        top: ~"calc(100vh - 10px)";
+        height: 10px;
+    }
+    #debuggerViewDiv {
+        display: none;
+        .right-pane;
+        top: ~"calc(100vh - 155px)";
+        height: 130px;
+        overflow-y: scroll;
+    }
+    #debuggerRangeSlider {
+        display: none;
+        .right-pane;
+        top: ~"calc(100vh - 25px)";
+        height: 10px;
+    }
+    #debuggerRangeSliderSpan {
+        display: none;
+        .right-pane;
+        top: ~"calc(100vh - 10px)";
+        height: 10px;
     }
 }
 
@@ -74,20 +135,35 @@ table, tr, td, th, td {
         bottom: 220px;
         height: ~"calc(100vh - 250px)";
     }
-    .console {
-        .right-pane;
-        top: ~"calc(100vh - 200px)";
-        height: 180px;
-        overflow-y: scroll;
-    }
     .code-button {
         .right-pane;
         top: ~"calc(100vh - 230px - 10px)";
         height: 20px;
     }
-}
-
-.console-content {
+    #console {
+        .right-pane;
+        top: ~"calc(100vh - 200px)";
+        height: 180px;
+    }
+    #debuggerViewDiv {
+        display: none;
+        .right-pane;
+        top: ~"calc(100vh - 200px)";
+        height: 155px;
+        overflow-y: scroll;
+    }
+    #debuggerRangeSlider {
+        display: none;
+        .right-pane;
+        top: ~"calc(100vh - 25px)";
+        height: 10px;
+    }
+    #debuggerRangeSliderSpan {
+        display: none;
+        .right-pane;
+        top: ~"calc(100vh - 10px)";
+        height: 10px;
+    }
 }
 
 .checkpoint-status-img img, .checkpoint-status-img div {
@@ -322,3 +398,6 @@ table, tr, td, th, td {
     width: 350px;
     border-radius: 5px;
 }
+
+/* Highlight color */
+.highlight { background-color: yellow }

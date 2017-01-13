@@ -67,6 +67,7 @@ class Checkpoint {
 class RightClickController {
 	constructor(editorObj) {
 		this.editor = editorObj.editor;
+
 		this.contextMenu = null;
 		this.contextMenuPos = null;
 		this.windowWidth = -1;
@@ -77,18 +78,46 @@ class RightClickController {
 
 		this.isContextMenuVisible = false;
 		this.activeClassName = "context-menu--active";
+		this.debugMenuID = "menu-debug";
+		this.viewHintMenuID = "menu-view-a-hint";
 		this.askQuestionMenuID = "menu-ask-a-question";
+
+		this.questionModal = []; // Question Modal; should not be an array
+
 		this.init();
 	}
 
 	init() {
 		this.collectContextMenu();
+		this.collectQuestionModal();
 		this.addContextListener();
 		this.addKeyUpListner();
+		this.addQusetionModalHandler();
 	}
 
 	collectContextMenu() {
 		this.contextMenu = $("#context-menu");
+	}
+
+	/* TODO: Duplicate. Also, there will be only 1 question modal -- the content of it
+	 *       will be dynamically populated, instead of rolling a separate question modal for each
+	 *       ckpt.
+	 */
+	collectQuestionModal() {
+		// TODO: Check if i matches with the index included in the identifier of el
+		$("div[id^='question-modal']").each((i, el) => {
+			this.questionModal.push(
+			{
+				questionID: i,
+				questionModal: $(el),
+				questionModalCheckpoint: $('#question-modal-checkpoint' + i),
+				questionModalTestCases: $('#question-modal-testcases' + i),
+				questionModalCode: $('#question-modal-code' + i),
+				questionModalText: $('#question-modal-text' + i),
+				questionModalSubmitBtn: $('#question-modal-submit-btn' + i),
+				questionModalCloseBtn: $('#question-modal-close' + i)
+			});
+		});     
 	}
 
 	addContextListener() {
@@ -104,12 +133,22 @@ class RightClickController {
 			if (button === 1) {
 				this.toggleMenuOff();
 				if (e.target.id === this.askQuestionMenuID) {
-					/* Assumes that the user selected an appropriate block of code */
 					var textBlock = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
-					this.sendQuestionRequest(textBlock);
+					$('#question-modal-code0').text(textBlock);
+					this.questionModal[0].questionModal.css('display', 'block');
+				} else if (e.target.id === this.viewHintMenuID) {
+					// TODO: implement me...
+				} else if (e.target.id === this.debugMenuID) {
+					this.debugStr = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
+					// TODO: this is not separated... having a separate class like this doesn't make
+					//       sense b/c this class would need access to other elements in the DOM.
+					// 		 Also, how would you make it so that the text selection is maintained (and
+					//		 highlighted) across different tabs in the execution slider?
+					$('#debuggerViewDiv').highlight(this.debugStr);
 				}
 			} else {
 				this.toggleMenuOff();
+				// TODO: Turn off the highlight as well?
 			}
 			return true;
 		});
@@ -187,25 +226,52 @@ class RightClickController {
 		this.contextMenu.attr("style", styleStr);
 	}
 
-	sendQuestionRequest(textBlock) {
-		console.log(textBlock);
-		/*
-		$.post(
-		{
-			url: URL,
-			data: JSON.stringify(dataObj),
-			success: (questionObj, status) => {
-				// Send the message to a subset of people based on the result of AST analysis
-				this.questionSocket.emit('question', questionObj); // Transfer the question in 'data'
+	/* TODO: Dup. */
+	addQusetionModalHandler() {
+		this.questionModal.forEach((obj, idx) => {
+			obj.questionModalSubmitBtn.on("click", (e) => {
+				// Assumes that the user selected an appropriate block of code
+				var textBlock = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
+				obj.questionModalCode.text(textBlock);
+				var question = obj.questionModalText.val();
+				var checkpointID = obj.questionID;
+				var testCases = obj.questionModalTestCases.html();
+				var data = {
+					command: QUESTION_COMMAND,
+					question: question, // TODO: modify this
+					checkpointID: checkpointID, // TODO: check if the IDs actually match
+					testCases: testCases, // TODO: modify the format
+					userName: USER_NAME, // should've been already logged in and the userName is set
+					language: LAB_LANG,
+					code: textBlock
+				};
+				var URL = QUESTION_URL + "/" + LAB_ID;
+				//-- preferrably we will show a pop up to fill out the rest of the question details
+
+				$.post(
+				{
+					url: URL,
+					data: JSON.stringify(data),
+					success: (data, status) => {
+						// Send the message to a subset of people based on the result of AST analysis
+						QUESTION_SOCKET.emit('question', data); // Transfer the question in 'data'
+						obj.questionModal.css('display', 'none');
+					},
+					error: (req, status, err) => {
+						console.log(err);
+					},
+					dataType: "json",
+					contentType: "application/json"
+				});
+			});
+
+			obj.questionModalCloseBtn.on("click", (e) => {
 				obj.questionModal.css('display', 'none');
-			},
-			error: (req, status, err) => {
-				console.log(err);
-			},
-			dataType: "json",
-			contentType: 'application/json'
+			});
 		});
-		*/
+	}
+
+	sendQuestionRequest(textBlock) {
 	}
 }
 
@@ -228,12 +294,7 @@ class EditorObj {
 }
 
 class Lab {
-	constructor(checkpoints = [], serverURL) {
-		this.labID = $('#lab-id-link').text(); // Lab ID
-		this.labLanguage = $('#lab-lang').text(); // Lab programming language
-		this.userName = $('#user-name').text(); // Current user name
-		this.password = $('#user-password').val();
-
+	constructor(checkpoints = []) {
 		this.checkpoints = checkpoints; // Array of checkpoints
 		this.questionBtns = []; // Question Buttons
 		this.questionModals = []; // Question Modal
@@ -274,9 +335,7 @@ class Lab {
 		// Code Editor Control Buttons
 		this.runBtn = $('#runBtn');
 		this.saveBtn = $('#saveBtn');
-
-		this.labURL = serverURL + '/lab';
-		this.questionURL = serverURL + '/question';
+		this.debugBtn = $('#debugBtn');
 
 		// Editor-related
 		this.editorObj = new EditorObj();
@@ -284,26 +343,18 @@ class Lab {
 
 		// Console
 		this.console = $('#console');
+		this.consoleObj = null;
+		this.consoleClear = $('#console-clear');
 
-		// Side menu
-		this.sideMenu = $('#side-menu');
+		// Debugger
+		this.debuggerViewDiv = $('#debuggerViewDiv');
+		this.debuggerRangeSlider = $('#debuggerRangeSlider');
+		this.debuggerRangeSliderSpan = $('#debuggerRangeSliderSpan');
+		this.debugTraces = [];
+		this.debugStr = '';
 
 		// Logged-in user data
 		this.userData = {};
-
-		// TODO: This should be moved to somewhere else
-		var queryStr = 'labID=' + this.labID + '&userName=' + this.userName;
-		this.labSocket = io.connect(this.labURL, { query: queryStr });
-		this.questionSocket = io.connect(this.questionURL, { query: queryStr });
-
-		// Constants
-		// TODO: Consolidate these somewhere with other constants
-		this.questionCmd = "question";
-		this.loginCmd = "login";
-		this.signupCmd = "signup";
-		this.runCmd = "run";
-		this.saveCmd = "save";
-		this.getUserCmd = "getUser";
 
 		this.init();
 	}
@@ -331,9 +382,6 @@ class Lab {
 	}
 
 	collectTestCaseSpans() {
-		$("span[id^='span-checkpoint']").each((i, el) => {
-			this.testCaseSpans.push($(el));
-		});
 	}
 
 	init() {
@@ -347,18 +395,15 @@ class Lab {
 		this.addQuestionNotificationHandler();
 		this.addAnswerNotificationHandler();
 
-		// Initialize the side menu using the library function
-		this.sideMenu.BootSideMenu({
-			pushBody: false,
-			width: "200px"
-		});
+		this.initConsole();
+		this.initDebugger();
 
 		// Initialize the user status
 		this.initUserStatus();
 	}
 
 	addQuestionNotificationHandler() {
-		this.labSocket.on('question', (data) => {
+		LAB_SOCKET.on('question', (data) => {
 			this.questionNotificationModal.css('display', 'inline');
 			var content = '<b>' + data.questioner + '</b> asked<br>"' + data.question + '"';
 			this.questionNotificationModalText.html('<p>' + content + '</p>');      
@@ -369,7 +414,7 @@ class Lab {
 	}
 
 	addAnswerNotificationHandler() {
-		this.labSocket.on('answer-posted', (data) => {
+		LAB_SOCKET.on('answer-posted', (data) => {
 			this.answerNotificationModal.css('display', 'inline');
 			var content = '<b>' + data.answerer + '</b> answered<br>"' + data.answer + '"<br> to your question';
 			this.answerNotificationModalText.html('<p>' + content + '</p>');        
@@ -381,49 +426,17 @@ class Lab {
 
 	qusetionModalHandler() {
 		this.questionModals.forEach((obj, idx) => {
-			obj.questionModalSubmitBtn.on("click", (e) => {
-				var questionText = obj.questionModalText.val();
-				var checkpointID = obj.questionID;
-				var testCases = obj.questionModalTestCases.html();
-				var dataObj = {
-					command: this.questionCmd,
-					question: questionText, // TODO: modify this
-					checkpointID: checkpointID, // TODO: check if the IDs actually match
-					testCases: testCases, // TODO: modify the format
-					userName: this.userName // should've been already logged in and the userName is set
-				};
-				var URL = this.questionURL + '/' + this.labID;
-				
-				$.post({
-					url: URL,
-					data: JSON.stringify(dataObj),
-					success: (questionObj, status) => {
-						// Send the message to a subset of people based on the result of AST analysis
-						this.questionSocket.emit('question', questionObj); // Transfer the question in 'data'
-						obj.questionModal.css('display', 'none');
-					},
-					error: (req, status, err) => {
-						console.log(err);
-					},
-					dataType: "json",
-					contentType: 'application/json'
-				});
-			});
-
-			obj.questionModalCloseBtn.on("click", (e) => {
-				obj.questionModal.css('display', 'none');
-			});
 		});
 	}
 
 	notificationModalHandler() {
 		// When clicking the notification itself
 		this.questionNotificationModal.on("click", (e) => {
-			window.location.href = "/question/" + this.labID + "?user=" + this.userName + "&password=" + this.password;
+			window.location.href = "/question/" + LAB_ID + "?user=" + USER_NAME + "&password=" + PASSWORD;
 		});
 
 		this.answerNotificationModal.on("click", (e) => {
-			window.location.href = "/question/" + this.labID + "?user=" + this.userName + "&password=" + this.password;
+			window.location.href = "/question/" + LAB_ID + "?user=" + USER_NAME + "&password=" + PASSWORD;
 		});
 
 		this.questionNotificationModalClose.on("click", (e) => {
@@ -437,24 +450,28 @@ class Lab {
 
 	loginModalHandler() {
 		this.loginModalLoginBtn.on("click", (e) => {
+			// TODO: Currently this is v messy; the USER_NAME value in the globals.js
+			// file is populated before the page is loaded, and it is inconsistent.
+			// In order to fetch the correct value, we're redirecting to a new URL
+			// with appropriate query parameters such that the router can feed all
+			// the necessary information before rendering the page.
 			var userName = this.loginModalLoginInput.val();
-			var URL = this.labURL + '/' + this.labID;
 
 			if (userName) {
 				var password = this.loginModalLoginPass.val();
 				var dataObj = {
-					command: this.loginCmd,
+					command: LOGIN_COMMAND,
 					userName: userName,
 					password: this.loginModalLoginPass.val()
 				};
 
 				if (password) {
 					$.post({
-						url: URL,
+						url: LAB_URL + '/' + LAB_ID,
 						data: JSON.stringify(dataObj),
 						success: (data) => {
 							if (data.ok) {
-								window.location.href = "/lab/" + this.labID + "?user=" + userName + "&password=" + password;
+								window.location.href = "/lab/" + LAB_ID + "?user=" + userName + "&password=" + password;
 							} else {
 								this.loginModalLoginStatus.html(data.reason);
 							}
@@ -474,8 +491,6 @@ class Lab {
 
 		this.loginModalSignupBtn.on("click", (e) => {
 			var userName = this.loginModalSignupInput.val();
-			var URL = this.labURL + '/' + this.labID;
-
 			var pass1 = this.loginModalSignupPass1.val();
 			var pass2 = this.loginModalSignupPass2.val();
 
@@ -483,7 +498,7 @@ class Lab {
 				if (pass1) {
 					if (pass1 === pass2) {
 						var userDataObj = {
-							command: this.signupCmd,
+							command: LOGIN_COMMAND,
 							userName: userName,
 							password: pass1,
 							role: 'student',
@@ -493,12 +508,12 @@ class Lab {
 							notificationPaneContent: {}
 						};
 						$.post({
-							url: URL,
+							url: LAB_URL,
 							data: JSON.stringify(userDataObj),
 							success: (data) => {
 								console.log(data);
 								if (data.ok) {
-									window.location.href = "/lab/" + this.labID + "?user=" + userName + "&password=" + pass1;
+									window.location.href = "/lab/" + LAB_ID + "?user=" + USER_NAME + "&password=" + pass1;
 								} else {
 									this.loginModalSignupStatus.html(data.reason);
 								}
@@ -561,13 +576,20 @@ class Lab {
 	}
 
 	addRunBtnHandler() {
-		this.runBtn.on('click', (e) => { 
+		this.runBtn.on('click', (e) => {
+			// Show the console
+			this.console.attr("style", "display: block;");
+			this.consoleClear.attr("style", "display: block;");
+			this.debuggerViewDiv.attr("style", "display: none;");
+			this.debuggerRangeSlider.attr("style", "display: none;");
+			this.debuggerRangeSliderSpan.attr("style", "display: none;");
+
 			// arrow function lets 'this' to be looked up in the lexical scope
-			var URL = this.labURL + '/' + this.labID;
+			var URL = LAB_URL + '/' + LAB_ID;
 			var dataObj = {
-				command: this.runCmd,
+				command: RUN_COMMAND,
 				code: this.editorObj.code,
-				language: this.labLanguage
+				language: LAB_LANG
 			};
 			$.post({
 				url: URL,
@@ -582,7 +604,7 @@ class Lab {
 						$('#state-img-checkpoint0').attr('src', '../images/error.png');
 						$('#state-img-checkpoint0-testcase0').attr('src', '../images/error.png');
 					}
-					this.console.append('<p class="console-content">>' + res + '</p>');
+					this.consoleObj.Write(res + '\n', 'jqconsole-output');
 				},
 				error: (req, status, err) => {
 					console.log(err);
@@ -595,18 +617,28 @@ class Lab {
 
 	addSaveBtnHandler() {
 		this.saveBtn.on("click", (e) => {
-			var URL = this.labURL + '/' + this.labID;
-			var consoleContents = [];
-			$("p[class^='console-content']").each((i, el) => {
-				consoleContents.push($(el).text());
-			});
-
+			var URL = LAB_URL + '/' + LAB_ID;
+			// Console data
+			var consoleContent = this.consoleObj.Dump();
+			var consoleHistory = this.consoleObj.GetHistory();
+			// Debugger data
+			var debugTraces = this.debugTraces;
+			var handlePosition = this.debuggerRangeSlider.slider('option', 'value');
+			var highlightedStr = this.debugStr;
 			var dataObj = {
-				command: this.saveCmd,
-				userName: this.userName,
+				command: SAVE_COMMAND,
+				userName: USER_NAME,
 				checkpointStatus: {},
 				code: this.editorObj.code,
-				consoleContents: consoleContents,
+				console: {
+					content: consoleContent,
+					history: consoleHistory,
+				},
+                debugger: {
+                    debugTraces: debugTraces,
+                    handlePosition: handlePosition,
+                    highlightedStr: highlightedStr
+                },
 				notificationPaneContent: {}
 			};
 
@@ -636,16 +668,91 @@ class Lab {
 		});
 	}
 
-	addTestCaseSpanHandlers() {
-		this.testCaseSpans.forEach((span, idx) => {
-			span.on('click', (e) => {
-				if ($("#div-checkpoint1-testcase0").css('display') === 'none') {
-					$("#div-checkpoint1-testcase0").fadeIn();
-					span.attr('class', 'glyphicon glyphicon-chevron-up');
-				} else {
-					$("#div-checkpoint1-testcase0").fadeOut();
-					span.attr('class', 'glyphicon glyphicon-chevron-down');                 
+	createDebugTrace(data) {
+		// Take the JSON string data and create it into an array of info
+		var JSONObj = JSON.parse(data);
+		var trace = JSONObj['trace'];
+
+		var executionText = '';
+		var executionTraces = [];
+		for (let i = 0; i < trace.length; ++i) {
+			var orderedGlobals = trace[i]['ordered_globals'];
+			if (orderedGlobals.length > 0) {
+				executionText += 'Global Frame<br>';
+				executionText += '<ul>'
+				for (let j = 0; j < orderedGlobals.length; ++j) {
+					executionText += '<li>' + orderedGlobals[j] + '</li>';
 				}
+				executionText += '</ul>'
+			}
+
+			var printOutput = trace[i]['stdout'];
+			if (printOutput) {
+				executionText += 'Print output: ' + printOutput + '<br>';
+			}
+
+			var stackElems = trace[i]['stack_to_render'];
+			if (stackElems.length > 0) {
+				executionText += 'Stack Frame<br>'
+				executionText += '<ul>'
+				for (let j = 0; j < stackElems.length; ++j) {
+					var elem = stackElems[j];
+					var encodedLocalNames = Object.keys(elem['encoded_locals']);
+					encodedLocalNames.forEach((name, k) => {
+						if (name === "__return__") {
+							executionText += '<li>Return' + ':' + elem['encoded_locals'][name] + '</li>';
+						} else {
+							executionText += '<li>' + name + ':' + elem['encoded_locals'][name] + '</li>';
+						}
+					});
+				}
+				executionText += '</ul>'
+			}
+
+			if (executionText !== '') {
+				executionTraces.push(executionText);
+				executionText = '';
+			}
+		}
+
+		return executionTraces;
+	}
+
+	addDebugBtnHandler() {
+		this.debugBtn.on('click', (e) => {
+			// Show the debugger
+			this.console.attr("style", "display: none;");
+			this.consoleClear.attr("style", "display: none;");
+			this.debuggerViewDiv.attr("style", "display: block;");
+			this.debuggerRangeSlider.attr("style", "display: block;");
+			this.debuggerRangeSliderSpan.attr("style", "display: block;");
+
+			// arrow function lets 'this' to be looked up in the lexical scope
+			var URL = LAB_URL + '/' + LAB_ID;
+			var dataObj = {
+				command: DEBUG_COMMAND,
+				code: this.editorObj.code,
+				language: LAB_LANG
+			};
+			$.post({
+				url: URL,
+				data: JSON.stringify(dataObj),
+				success: (data) => {
+					var traces = this.createDebugTrace(data);
+					if (traces.length > 0) {
+						this.debugTraces = traces;
+						this.debuggerViewDiv.html(this.debugTraces[0]);
+						this.debuggerRangeSlider.slider('option', 'min', 1);
+						this.debuggerRangeSlider.slider('option', 'max', traces.length);
+						this.debuggerRangeSlider.slider('option', 'value', 1);
+						this.debuggerRangeSliderSpan.text(this.createDebuggerSpanText(1, traces.length));
+					}
+				},
+				error: (req, status, err) => {
+					console.log(err);
+				},
+				dataType: "text",
+				contentType: 'application/json'
 			});
 		});
 	}
@@ -653,14 +760,22 @@ class Lab {
 	// currently no-use
 	addEditorContentChangeEventHandler() {
 		this.editorObj.editor.getSession().on('change', function() {
-			// do something
+			// chunking every 10 second? Would there be a good behavioral cue that 
+			// can tell us that the student's thought train has stopped and 
+			// the working code is produced? I.e. how do we know from behavioral cues
+			// that one has produced a syntax-error free chunk of code?
+			// probably not ... we will just let the server do the work.
+
+			// Send the server the code to parse every 3 second or so, and the server will
+			// Parse it and store it to the database ... what will happen if there are many
+			// duplicates? Should we dedup the database every once in a while?
 		});
 	}
 
 	addBtnHandlers() {
 		this.addRunBtnHandler();
+		this.addDebugBtnHandler();
 		this.addSaveBtnHandler();
-		this.addTestCaseSpanHandlers();
 	}
 
 	addModalHandlers() {
@@ -686,42 +801,105 @@ class Lab {
 		return done;
 	}
 
-	initUserStatus() {
-		var userName = this.userName;
-		var URL = this.labURL + '/' + this.labID;
-		var dataObj = {
-			command: this.getUserCmd,
-			userName: userName
+	startConsole() {
+		var startPrompt = () => {
+			this.consoleObj.Prompt(true, (input) => {
+				// TODO: dedup
+				var URL = LAB_URL + '/' + LAB_ID;
+				var dataObj = {
+					command: RUN_COMMAND,
+					code: input,
+					language: LAB_LANG
+				};
+				$.post({
+					url: URL,
+					data: JSON.stringify(dataObj),
+					success: (data) => {
+						var res = data.toString('utf-8').trim();
+						this.consoleObj.Write(res + '\n', 'jqconsole-output');
+					},
+					error: (req, status, err) => {
+						console.log(err);
+					},
+					dataType: "text",
+					contentType: 'application/json'
+				});
+				startPrompt();
+			});
 		};
-		$.post({
-			url: URL,
-			data: JSON.stringify(dataObj),
-			success: (data) => {
-				if (data.ok) {
-					this.userData = data.userData;
-					// Inject the most recently saved status
-					this.editorObj.code = this.userData.code;
-				} else {
-				}
-			},
-			error: (req, status, err) => {
-				console.log(err);
-			},
-			contentType: 'application/json'
+		startPrompt();		
+	}
+
+	initConsole() {
+		this.consoleObj = this.console.jqconsole('', '>>>');
+		this.startConsole();
+		this.consoleClear.on("click", (e) => {
+			e.preventDefault();
+			this.consoleObj.Reset();
+			this.startConsole();
 		});
+	}
+
+	createDebuggerSpanText(val, max) {
+		return 'Execution step ' + val + ' out of ' + max;
+	}
+
+	initDebugger() {
+		this.debuggerRangeSlider.slider({
+			range: 'max',
+			min: 0,
+			max: 0,
+			value: 0
+		});
+
+		this.debuggerRangeSlider.on('slide', (event, ui) => {
+			this.debuggerRangeSliderSpan.text(
+				this.createDebuggerSpanText(ui.value, this.debuggerRangeSlider.slider('option', 'max'))
+			);
+			this.debuggerViewDiv.html(this.debugTraces[ui.value - 1]);
+		});
+
+		this.debuggerRangeSliderSpan.text(
+			this.createDebuggerSpanText(0, 0)
+		);
+	}
+
+	initUserStatus() {
+		if (USER_NAME) {
+			var URL = LAB_URL + '/' + LAB_ID;
+			var dataObj = {
+				command: GET_USER_COMMAND,
+				userName: USER_NAME
+			};
+			$.post({
+				url: URL,
+				data: JSON.stringify(dataObj),
+				success: (data) => {
+					if (data.ok) {
+						this.userData = data.userData;
+						this.editorObj.code = this.userData.code; // inject the last saved code
+						this.consoleObj.Write(this.userData.console.content, 'jqconsole-output');
+						this.consoleObj.SetHistory(this.userData.console.history);
+					}
+				},
+				error: (req, status, err) => {
+					console.log(err);
+				},
+				contentType: 'application/json'
+			});
+		}
 	}
 }
 
 class EditorController {
-	constructor(serverURL = "https://labyrinth1.herokuapp.com") {
-		this.serverURL = serverURL;
+	constructor() {
 		this.init();
 		// Lab-related; this should be in the authoring environment
 		var c1 = new Checkpoint();
 		c1.description = 'Write a function hello() that prints "Hello, world!" to the console.';
 		c1.testCases = [new TestCase(null, 'Hello, world!')];
 		var checkpoints = [c1];
-		this.lab = new Lab(checkpoints, this.serverURL);
+		this.lab = new Lab(checkpoints, SERVER_URL);
 	}
 
 	init() {
@@ -729,7 +907,7 @@ class EditorController {
 }
 
 $(document).ready(function() {
-	var editorCtrl = new EditorController("http://localhost:3000");
+	var editorCtrl = new EditorController();
 	var rightClickCtrl = new RightClickController(editorCtrl.lab.editorObj);
 });
 

@@ -4,12 +4,9 @@
 <title>{{title}}</title>
     <link rel="shortcut icon" href="">
     <link rel="stylesheet" type="text/css" href="../stylesheets/css/skeleton.css" media="screen" />
-    <!-- Lato font -->
-    <link rel="stylesheet" href='https://fonts.googleapis.com/css?family=Lato:100,200,300,400,500,600,700' type="text/css">
-    <!-- Bootstrap -->
-    <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css" type="text/css">
-    <!-- BootSideMenu -->
-    <link rel="stylesheet" href="../stylesheets/css/BootSideMenu.css" type="text/css">
+    <link rel="stylesheet" href='https://fonts.googleapis.com/css?family=Lato:100,200,300,400,500,600,700' type="text/css"> <!-- Lato font -->
+    <link rel="stylesheet" href="../stylesheets/css/jquery-ui.min.css" type="text/css"> <!-- jQuery UI -->
+    <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css" type="text/css"> <!-- Bootstrap -->
 </head>
 <body>
 
@@ -93,7 +90,7 @@
         <div class="question-modal-content">
             <span id="question-modal-close{{@index}}" class="question-modal-close">&times;</span>
             <p><b>Checkpoint</b></p>
-            <p id="question-modal-checkpoint{{@index}}">{{desc}}</p>
+            <p id="question-modal-checkpoint{{@index}}">{{{desc}}}</p>
             <p><b>Test cases</b></p>
             <table id="question-modal-testcases{{@index}}">
                 <tr>
@@ -112,12 +109,13 @@
                 </tr>
                 {{/each}}
             </table>
+            <p><b>Code</b></p>
+            <pre id="question-modal-code{{@index}}"></pre>
             <p>
-                <b>Question</b>
-                <br>
-                <textarea id="question-modal-text{{@index}}" rows="4"></textarea>
+                <label for="question-modal-text{{@index}}">Question</label>
+                <textarea id="question-modal-text{{@index}}" class="form-control" rows="5"></textarea>
             </p>
-            <button id="question-modal-submit-btn{{@index}}">Submit</button>
+            <button id="question-modal-submit-btn{{@index}}" class="btn btn-primary btn-sm">Submit</button>
         </div>
     </div>
     {{/each}}
@@ -149,11 +147,9 @@
 
     <!-- Checkpoints -->
     {{#each labDoc.checkpoints}}
-    <div id="checkpoint{{@index}}" class="checkpoint-status-img">
+    <div id="checkpoint{{@index}}" class="right-panel">
         <p style="text-align: center;"><b>{{title}}</b><p>
-        <p><img id="checkpoint{{@index}}-state-img" src="../images/minus.png"/>
-            {{{desc}}}
-        </p>
+        <p>{{{desc}}}</p>
         {{#if commandBlocks.length}}
         <p>
             <b>Commands</b>
@@ -178,41 +174,23 @@
             <b>Test Cases</b>
             {{#each testCases}}
             <img id="state-img-checkpoint{{@../index}}-testcase{{@index}}" src="../images/minus.png"/>
+            <!--
             <span id="span-checkpoint{{@../index}}-testcase{{@index}}" class="glyphicon glyphicon-chevron-down"></span>
-            <div id="div-checkpoint{{@../index}}-testcase{{@index}}" class="testCase-div">
-                <button id="runBtn-checkpoint{{@../index}}-testcase{{@index}}" class="btn btn-primary btn-sm">Run</button>
+            -->
+            <div id="div-checkpoint{{@../index}}-testcase{{@index}}">
                 <pre>
                     {{commands}}
                 </pre>
             </div>
             <br>
             {{/each}}
-            <!--
-            <table>
-                <tr>
-                    <th>#</th>
-                    <th>Function</th>
-                    <th>Input</th>
-                    <th>Output</th>
-                    <th>State</th>
-                </tr>
-                {{#each testCases}}
-                <tr>
-                    <td>{{@index}}</td>
-                    <td>{{function}}</td>
-                    <td>{{inputType}}: {{input}}</td>
-                    <td>{{outputType}}: {{output}}</td>
-                    <td><img id="checkpoint{{@../index}}-testcase{{@index}}-state-img" src="../images/minus.png"/></td>
-                </tr>
-                {{/each}}
-            </table>
-            -->
-
         </p>
         {{/if}}
+        <!--
         <p>
             <button type="submit" id="checkpoint{{@index}}-question-btn" class="btn btn-primary btn-sm">Ask a question</button>
         </p>
+        -->
     </div>
     {{/each}}
 </div>
@@ -224,50 +202,48 @@
 <!-- Code Editor Controls -->
 <div id="code-button" class="code-button">
     <button id="runBtn" class="btn btn-primary btn-sm">Run</button>
+    <button id="debugBtn" class="btn btn-defautl btn-sm">Debug</button>
     <button id="saveBtn" class="btn btn-primary btn-sm">Save</button>
     <p id="editor-status" style="display: inline-block;"></p>
 </div>
 
 <!-- Console -->
-<div id="console" class="console">
-    <p>Console</p>
-    {{#each user.console}}
-        <p class="console-content">{{this}}</p>
-    {{/each}}
+<div id="console">
 </div>
+<a id="console-clear" href="#">clear</a>
 
-<!-- Side Menu Panel -->
-<div id="side-menu">
-    <div class="list-group">
-        <div class="list-group-item" id="notifications-header">
-            Notifications
-        </div>
-        <div class="list-group-item" id="suggestions-header">
-            Suggestions
-        </div>
-    </div>
-</div>
+<!-- Debugger Panel -->
+<div id="debuggerViewDiv"></div>
+<div id="debuggerRangeSlider" class="debugger-range-slider"></div>
+<span id="debuggerRangeSliderSpan" class="debugger-range-slider-span"></span>
 
 <!-- Context Menu -->
 <nav id="context-menu" class="context-menu">
     <ul class="context-menu__items">
+        <li class="context-menu__item">
+            <a href="#" id="menu-debug" class="context-menu__link"><i class="fa fa-edit"></i> Debug</a>
+        </li>
+        <li class="context-menu__item">
+            <a href="#" id="menu-view-a-hint" class="context-menu__link"><i class="fa fa-edit"></i> View a hint</a>
+        </li>
         <li class="context-menu__item">
             <a href="#" id="menu-ask-a-question" class="context-menu__link"><i class="fa fa-edit"></i> Ask a quetsion</a>
         </li>
     </ul>
 </nav>
 
-<!-- jQuery -->
 <script src="../javascripts/jquery-3.1.1.min.js" type="text/javascript" charset="utf-8"></script>
-<!-- Ace editor -->
 <script src="../javascripts/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="../javascripts/jquery.highlight-5.js" type="text/javascript" charset="utf-8"></script> <!-- Highlight -->
 <!-- Socket.io generated -->
 <script src="../socket.io/socket.io.js" type="text/javascript" charset="utf-8"></script>
-<!-- Custom controller code -->
-<script src="../javascripts/controller.js" type="text/javascript" charset="utf-8"></script>
-<!-- Bootstrap -->
+<script src="../javascripts/jquery-ui.min.js" type="text/javascript" charset="utf-8"></script> <!-- jQuery UI -->
 <script src="../bootstrap/js/bootstrap.min.js" type="text/javascript" charset="utf-8"></script>
-<!-- BootSideMenu -->
-<script src="../javascripts/BootSideMenu.js" type="text/javascript" charset="utf-8"></script>
+<script src="../javascripts/jquery.ba-dotimeout.min.js" type="text/javascript" charset="utf-8"></script> <!-- jQuery doTimeout -->
+<script src="../javascripts/diff_match_patch.js" type="text/javascript" charset="utf-8"></script> <!-- diff-match-patch -->
+<script src="../javascripts/globals.js" type="text/javascript" charset="utf-8"></script> <!-- Custom Constants -->
+<script src="../javascripts/save_code.js" type="text/javascript" charset="utf-8"></script> <!-- Saving code AST -->
+<script src="../javascripts/jqconsole.js" type="text/javascript" charset="utf-8"></script><!-- jqConsole -->
+<script src="../javascripts/controller.js" type="text/javascript" charset="utf-8"></script> <!-- Custom controller code -->
 </body>
 </html>

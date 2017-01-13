@@ -1,9 +1,9 @@
 module.exports = function(io, db, handlebars) {
 	var express = require('express');
-	var router = express.Router();
+	var ast = require('./ast');
 
-	const questionCmd 		= "question";
-	const answerCmd			= "answer";
+	var router = express.Router();
+	var analyzer = new ast(db);
 
 	function findUser(users, userName) {
 		var userIdx = -1;
@@ -59,13 +59,14 @@ module.exports = function(io, db, handlebars) {
 		var labID = req.params.labID;
 		var command = req.body.command;
 
-		if (command === questionCmd) {
+		if (command === "question") {
 			// checkpoint numbering is ensured
 			var question = req.body.question;
 			var checkpointID = req.body.checkpointID;
 			var testCases = req.body.testCases;
 			var userName = req.body.userName;
 			var checkpointQuestionsQueryStr = 'labDoc.checkpoints.' + checkpointID + '.questions';
+			var code = req.body.code;
 			var questionObj = {
 				questioner: userName,
 				question: question,
@@ -82,18 +83,22 @@ module.exports = function(io, db, handlebars) {
 				if (err) {
 					console.log(err);
 					res.sendStatus(500);
+					return;
 				} else {
 					if (docs.length === 1) {
 						questionObj.checkpoint = docs[0].labDoc.checkpoints[checkpointID]; // extend the question object with the corresponding checkpoint
 						questionObj.checkpoint.questions = undefined; // but drop the 'questions' field -- NeDB does not add undefined fields
 						questionObj.checkpoint.checkpointIdx = checkpointID;
+						// Each lab has an array of "timelineQuestions"
 						db.update(
 							{labID: labID},
 							{$push: {timelineQuestions: questionObj}},
 							{},
 							() => {}
 						);
-						res.status(200).json(questionObj);
+
+						var users = docs[0].users;
+						analyzer.findRelevantUsers(users, code, questionObj, () => { res.status(200).json(questionObj); });
 					} else {
 						res.render('error',
 						{
@@ -103,7 +108,7 @@ module.exports = function(io, db, handlebars) {
 					}
 				}
 			});
-		} else if (command === answerCmd) {
+		} else if (command === "answer") {
 			var userName = req.body.userName;
 			var answer = req.body.answer;
 			var checkpointIdx = req.body.checkpointIdx;
@@ -114,7 +119,6 @@ module.exports = function(io, db, handlebars) {
 			};
 			
 			var answerQueryStr = 'timelineQuestions.' + questionIdx + '.answers';
-			console.log(answerQueryStr);
 			var answerQueryObj = {};
 			answerQueryObj[answerQueryStr] = answerObj;
 
@@ -131,7 +135,6 @@ module.exports = function(io, db, handlebars) {
 					if (docs.length === 1) {
 						var questioner = docs[0].timelineQuestions[questionIdx].questioner;
 						var checkpointAnswersQueryStr = 'labDoc.checkpoints.' + checkpointIdx + '.questions.' + questionIdx + '.answers';
-						console.log(checkpointAnswersQueryStr);
 						var checkpointAnswerQueryObj = {};
 						checkpointAnswerQueryObj[checkpointAnswersQueryStr] = answerObj;
 						db.update(

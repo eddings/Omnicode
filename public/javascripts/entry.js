@@ -1,10 +1,5 @@
 class EntryController {
-    constructor(serverURL = "https://labyrinth1.herokuapp.com") {
-        this.serverURL = serverURL;
-        this.labURL = this.serverURL + '/lab';
-
-        this.searchLabIDsCmd = 'searchLabIDs';
-
+    constructor() {
         this.searchBox = $('#labs');
         this.searchBoxFirstClicked = false;
         this.goBtn = $('#goBtn'); //ui-button ui-widget ui-corner-all
@@ -24,10 +19,10 @@ class EntryController {
 
     initializeLabIDs() {
         var dataObj = {
-            command: this.searchLabIDsCmd
+            command: SEARCH_LAB_IDS_COMMAND
         };
         $.post({
-            url: this.labURL,
+            url: LAB_URL,
             data: JSON.stringify(dataObj),
             success: (data) => {
                 this.labIDs = data.labIDs;
@@ -49,7 +44,7 @@ class EntryController {
 
             if (this.labIDs.includes(searchTerm)) {
                 if (e.keyCode === 13) { // Enter key detected
-                    window.location.href = this.labURL + '/' + searchTerm;
+                    window.location.href = LAB_URL + '/' + searchTerm;
                 }
                 this.goBtn.attr('disabled', false);
             } else {
@@ -68,11 +63,11 @@ class EntryController {
 
     addGoBtnHandler() {
         this.goBtn.on('click', (e) => {
-            window.location.href = this.labURL + '/' + this.searchBox.val();
+            window.location.href = LAB_URL + '/' + this.searchBox.val();
         });
     }
 }
 
 $(document).ready(function() {
-    var ctrl = new EntryController("http://localhost:3000");
+    var ctrl = new EntryController();
 });
