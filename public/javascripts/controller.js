@@ -144,7 +144,7 @@ class RightClickController {
 					//       sense b/c this class would need access to other elements in the DOM.
 					// 		 Also, how would you make it so that the text selection is maintained (and
 					//		 highlighted) across different tabs in the execution slider?
-					$('#debuggerViewDiv').highlight(this.debugStr);
+					$('#debugger-view-div').highlight(this.debugStr); // TODO: remove this separate id tag
 				}
 			} else {
 				this.toggleMenuOff();
@@ -347,9 +347,9 @@ class Lab {
 		this.consoleClear = $('#console-clear');
 
 		// Debugger
-		this.debuggerViewDiv = $('#debuggerViewDiv');
-		this.debuggerRangeSlider = $('#debuggerRangeSlider');
-		this.debuggerRangeSliderSpan = $('#debuggerRangeSliderSpan');
+		this.debuggerViewDiv = $('#debugger-view-div');
+		this.debuggerRangeSlider = $('#debugger-range-slider');
+		this.debuggerRangeSliderSpan = $('#debugger-range-slider-span');
 		this.debugTraces = [];
 		this.debugStr = '';
 
@@ -498,22 +498,23 @@ class Lab {
 				if (pass1) {
 					if (pass1 === pass2) {
 						var userDataObj = {
-							command: LOGIN_COMMAND,
+							command: SIGNUP_COMMAND,
 							userName: userName,
 							password: pass1,
 							role: 'student',
 							checkpointStatus: {},
 							code: '',
-							console: [],
+							codeEdits: [],
+							console: {},
+							debugger: {},
 							notificationPaneContent: {}
 						};
 						$.post({
 							url: LAB_URL,
 							data: JSON.stringify(userDataObj),
 							success: (data) => {
-								console.log(data);
 								if (data.ok) {
-									window.location.href = "/lab/" + LAB_ID + "?user=" + USER_NAME + "&password=" + pass1;
+									window.location.href = LAB_URL + "/" + LAB_ID + "?user=" + userName + "&password=" + pass1;
 								} else {
 									this.loginModalSignupStatus.html(data.reason);
 								}
@@ -877,7 +878,11 @@ class Lab {
 				success: (data) => {
 					if (data.ok) {
 						this.userData = data.userData;
-						this.editorObj.code = this.userData.code; // inject the last saved code
+						// TODO: Why creating a new object everytime?
+						var testParser = new TestParser(this.userData.code);
+						var parsedObj = testParser.parse();
+						this.editorObj.code = parsedObj.code; // inject the last saved code w/o test cases
+						
 						this.consoleObj.Write(this.userData.console.content, 'jqconsole-output');
 						this.consoleObj.SetHistory(this.userData.console.history);
 					}

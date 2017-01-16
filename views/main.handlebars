@@ -148,7 +148,7 @@
     <!-- Checkpoints -->
     {{#each labDoc.checkpoints}}
     <div id="checkpoint{{@index}}" class="right-panel">
-        <p style="text-align: center;"><b>{{title}}</b><p>
+        <p style="text-align: center;"><b><img id="checkpoint{{@../index}}-command{{@index}}-state-img" src="../images/minus.png"/>{{title}}</b><p>
         <p>{{{desc}}}</p>
         {{#if commandBlocks.length}}
         <p>
@@ -174,23 +174,9 @@
             <b>Test Cases</b>
             {{#each testCases}}
             <img id="state-img-checkpoint{{@../index}}-testcase{{@index}}" src="../images/minus.png"/>
-            <!--
-            <span id="span-checkpoint{{@../index}}-testcase{{@index}}" class="glyphicon glyphicon-chevron-down"></span>
-            -->
-            <div id="div-checkpoint{{@../index}}-testcase{{@index}}">
-                <pre>
-                    {{commands}}
-                </pre>
-            </div>
-            <br>
             {{/each}}
         </p>
         {{/if}}
-        <!--
-        <p>
-            <button type="submit" id="checkpoint{{@index}}-question-btn" class="btn btn-primary btn-sm">Ask a question</button>
-        </p>
-        -->
     </div>
     {{/each}}
 </div>
@@ -203,7 +189,7 @@
 <div id="code-button" class="code-button">
     <button id="runBtn" class="btn btn-primary btn-sm">Run</button>
     <button id="debugBtn" class="btn btn-defautl btn-sm">Debug</button>
-    <button id="saveBtn" class="btn btn-primary btn-sm">Save</button>
+    <button id="saveAndPublishBtn" class="btn btn-primary btn-sm">Save</button>
     <p id="editor-status" style="display: inline-block;"></p>
 </div>
 
@@ -213,9 +199,9 @@
 <a id="console-clear" href="#">clear</a>
 
 <!-- Debugger Panel -->
-<div id="debuggerViewDiv"></div>
-<div id="debuggerRangeSlider" class="debugger-range-slider"></div>
-<span id="debuggerRangeSliderSpan" class="debugger-range-slider-span"></span>
+<div id="debugger-view-div"></div>
+<div id="debugger-range-slider"></div>
+<span id="debugger-range-slider-span"></span>
 
 <!-- Context Menu -->
 <nav id="context-menu" class="context-menu">
@@ -232,18 +218,18 @@
     </ul>
 </nav>
 
-<script src="../javascripts/jquery-3.1.1.min.js" type="text/javascript" charset="utf-8"></script>
-<script src="../javascripts/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="../javascripts/jquery-3.1.1.min.js" type="text/javascript" charset="utf-8"></script> <!-- jQuery -->
+<script src="../javascripts/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script> <!-- Ace -->
 <script src="../javascripts/jquery.highlight-5.js" type="text/javascript" charset="utf-8"></script> <!-- Highlight -->
-<!-- Socket.io generated -->
-<script src="../socket.io/socket.io.js" type="text/javascript" charset="utf-8"></script>
+<script src="../socket.io/socket.io.js" type="text/javascript" charset="utf-8"></script> <!-- Socket.io generated -->
 <script src="../javascripts/jquery-ui.min.js" type="text/javascript" charset="utf-8"></script> <!-- jQuery UI -->
-<script src="../bootstrap/js/bootstrap.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../bootstrap/js/bootstrap.min.js" type="text/javascript" charset="utf-8"></script> <!-- Bootstrap -->
 <script src="../javascripts/jquery.ba-dotimeout.min.js" type="text/javascript" charset="utf-8"></script> <!-- jQuery doTimeout -->
 <script src="../javascripts/diff_match_patch.js" type="text/javascript" charset="utf-8"></script> <!-- diff-match-patch -->
 <script src="../javascripts/globals.js" type="text/javascript" charset="utf-8"></script> <!-- Custom Constants -->
 <script src="../javascripts/save_code.js" type="text/javascript" charset="utf-8"></script> <!-- Saving code AST -->
-<script src="../javascripts/jqconsole.js" type="text/javascript" charset="utf-8"></script><!-- jqConsole -->
+<script src="../javascripts/jqconsole.js" type="text/javascript" charset="utf-8"></script> <!-- jqConsole -->
+<script src="../javascripts/test_parser.js" type="text/javascript" charset="utf-8"></script> <!-- Testcase Parser -->
 <script src="../javascripts/controller.js" type="text/javascript" charset="utf-8"></script> <!-- Custom controller code -->
 </body>
 </html>

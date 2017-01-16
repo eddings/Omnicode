@@ -29,7 +29,7 @@
 # of all in-scope data structures after each executed instruction.
 
 
-
+import imp
 import sys
 import bdb # the KEY import here!
 import re
@@ -86,6 +86,7 @@ class NullDevice():
 
 
 # These could lead to XSS or other code injection attacks, so be careful:
+# these are now deprecated as of 2016-06-28
 __html__ = None
 def setHTML(htmlStr):
   global __html__
@@ -122,21 +123,23 @@ ALLOWED_STDLIB_MODULE_IMPORTS = ('math', 'random', 'time', 'datetime',
 # already been done above
 OTHER_STDLIB_WHITELIST = ('StringIO', 'io')
 
+# TODO: 2017-01-14: this CUSTOM_MODULE_IMPORTS thing is now DEPRECATED ...
 # whitelist of custom modules to import into OPT
 # (TODO: support modules in a subdirectory, but there are various
 # logistical problems with doing so that I can't overcome at the moment,
 # especially getting setHTML, setCSS, and setJS to work in the imported
 # modules.)
-CUSTOM_MODULE_IMPORTS = ('callback_module',
-                         'ttt_module',
-                         'html_module',
-                         'htmlexample_module',
+CUSTOM_MODULE_IMPORTS = () # ignore these for now
+#                        ('callback_module',
+#                         'ttt_module',
+#                         'html_module',
+#                         'htmlexample_module',
 # ignore these troublesome imports for now
 #                         'watch_module',   # 'import sys' might be troublesome
 #                         'bintree_module',
 #                         'GChartWrapper',
-                         'matrix',
-                         'htmlFrame')
+#                         'matrix',
+#                         'htmlFrame')
 
 
 # PREEMPTIVELY import all of these modules, so that when the user's
@@ -258,23 +261,7 @@ BANNED_BUILTINS = ['reload', 'open', 'compile',
                    'dir', 'globals', 'locals', 'vars']
 # Peter says 'apply' isn't dangerous, so don't ban it
 
-IGNORE_VARS = set(('__user_stdout__', '__OPT_toplevel__', '__builtins__', '__name__', '__exception__', '__doc__', '__package__'))
-
-def get_user_stdout(frame):
-  my_user_stdout = frame.f_globals['__user_stdout__']
-
-  # This is SUPER KRAZY! In Python 2, the buflist inside of a StringIO
-  # instance can be made up of both str and unicode, so we need to convert
-  # the str to unicode and replace invalid characters with the Unicode '?'
-  # But leave unicode elements alone. This way, EVERYTHING inside buflist
-  # will be unicode. (Note that in Python 3, everything is already unicode,
-  # so we're fine.)
-  if not is_python3:
-    my_user_stdout.buflist = [(e.decode('utf-8', 'replace')
-                               if type(e) is str
-                               else e)
-                              for e in my_user_stdout.buflist]
-  return my_user_stdout.getvalue()
+IGNORE_VARS = set(('__builtins__', '__name__', '__exception__', '__doc__', '__package__'))
 
 
 '''
@@ -448,12 +435,32 @@ def visit_function_obj(v, ids_seen_set):
 
 
 class PGLogger(bdb.Bdb):
-
+    # if custom_modules is non-empty, it should be a dict mapping module
+    # names to the python source code of each module. when _runscript is
+    # called, it will do "from <module> import *" for all modules in
+    # custom_modules before running the user's script and then trace all
+    # code within custom_modules
+    #
+    # if separate_stdout_by_module, then have a separate stdout stream
+    # for each module rather than all stdout going to a single stream
     def __init__(self, cumulative_mode, heap_primitives, show_only_outputs, finalizer_func,
-                 disable_security_checks=False, crazy_mode=False):
+                 disable_security_checks=False, crazy_mode=False,
+                 custom_modules=None, separate_stdout_by_module=False):
         bdb.Bdb.__init__(self)
         self.mainpyfile = ''
         self._wait_for_mainpyfile = 0
+
+        self.separate_stdout_by_module = separate_stdout_by_module
+        self.stdout_by_module = {} # Key: module name, Value: StringIO faux-stdout
+
+        self.modules_to_trace = set(['__main__']) # always trace __main__!
+
+        # Key: module name
+        # Value: module's python code as a string
+        self.custom_modules = custom_modules
+        if self.custom_modules:
+            for module_name in self.custom_modules:
+                self.modules_to_trace.add(module_name)
 
         self.disable_security_checks = disable_security_checks
 
@@ -535,6 +542,31 @@ class PGLogger(bdb.Bdb):
         self.breakpoints = []
 
         self.prev_lineno = -1 # keep track of previous line just executed
+
+
+    def get_user_stdout(self):
+        def encode_stringio(sio):
+            # This is SUPER KRAZY! In Python 2, the buflist inside of a StringIO
+            # instance can be made up of both str and unicode, so we need to convert
+            # the str to unicode and replace invalid characters with the Unicode '?'
+            # But leave unicode elements alone. This way, EVERYTHING inside buflist
+            # will be unicode. (Note that in Python 3, everything is already unicode,
+            # so we're fine.)
+            if not is_python3:
+                sio.buflist = [(e.decode('utf-8', 'replace')
+                                           if type(e) is str
+                                           else e)
+                                          for e in sio.buflist]
+            return sio.getvalue()
+
+        if self.separate_stdout_by_module:
+            ret = {}
+            for module_name in self.stdout_by_module:
+                ret[module_name] = encode_stringio(self.stdout_by_module[module_name])
+            return ret
+        else:
+            # common case - single stdout stream
+            return encode_stringio(self.user_stdout)
 
 
     def get_frame_id(self, cur_frame):
@@ -648,8 +680,11 @@ class PGLogger(bdb.Bdb):
         if self.done: return
 
         if self._wait_for_mainpyfile:
-            if (self.canonic(frame.f_code.co_filename) != "<string>" or
+            if ((frame.f_globals['__name__'] not in self.modules_to_trace) or
                 frame.f_lineno <= 0):
+            # older code:
+            #if (self.canonic(frame.f_code.co_filename) != "<string>" or
+            #    frame.f_lineno <= 0):
                 return
             self._wait_for_mainpyfile = 0
         self.interaction(frame, None, 'step_line')
@@ -694,6 +729,7 @@ class PGLogger(bdb.Bdb):
         top_frame = tos[0]
         lineno = tos[1]
 
+        topframe_module = top_frame.f_globals['__name__']
 
         # debug ...
         '''
@@ -715,9 +751,9 @@ class PGLogger(bdb.Bdb):
 
         # Look only at the "topmost" frame on the stack ...
 
-        # it seems like user-written code has a filename of '<string>',
-        # but maybe there are false positives too?
-        if self.canonic(top_frame.f_code.co_filename) != '<string>':
+        # if we're not in a module that we are explicitly tracing, skip:
+        # (this comes up in tests/backend-tests/namedtuple.txt)
+        if topframe_module not in self.modules_to_trace:
           return
         # also don't trace inside of the magic "constructor" code
         if top_frame.f_code.co_name == '__new__':
@@ -725,31 +761,6 @@ class PGLogger(bdb.Bdb):
         # or __repr__, which is often called when running print statements
         if top_frame.f_code.co_name == '__repr__':
           return
-
-        # if top_frame.f_globals doesn't contain the sentinel '__OPT_toplevel__',
-        # then we're in another global scope altogether, so skip it!
-        # (this comes up in tests/backend-tests/namedtuple.txt)
-        if '__OPT_toplevel__' not in top_frame.f_globals:
-          return
-
-
-        # OLD CODE -- bail if any element on the stack matches these conditions
-        # note that the old code passes tests/backend-tests/namedtuple.txt
-        # but the new code above doesn't :/
-        '''
-        for (cur_frame, cur_line) in self.stack[1:]:
-          # it seems like user-written code has a filename of '<string>',
-          # but maybe there are false positives too?
-          if self.canonic(cur_frame.f_code.co_filename) != '<string>':
-            return
-          # also don't trace inside of the magic "constructor" code
-          if cur_frame.f_code.co_name == '__new__':
-            return
-          # or __repr__, which is often called when running print statements
-          if cur_frame.f_code.co_name == '__repr__':
-            return
-        '''
-
 
         # don't trace if wait_for_return_stack is non-null ...
         if self.wait_for_return_stack:
@@ -766,7 +777,18 @@ class PGLogger(bdb.Bdb):
           # should already be ensured by the above check for whether we're
           # in user-written code.
           if event_type == 'call':
-            func_line = self.get_script_line(top_frame.f_code.co_firstlineno)
+            first_lineno = top_frame.f_code.co_firstlineno
+            if topframe_module == "__main__":
+                func_line = self.get_script_line(first_lineno)
+            elif topframe_module in self.custom_modules:
+                module_code = self.custom_modules[topframe_module]
+                module_code_lines = module_code.splitlines() # TODO: maybe pre-split lines?
+                func_line = module_code_lines[first_lineno-1]
+            else:
+                # you're hosed
+                func_line = ''
+            #print >> sys.stderr, func_line
+
             if CLASS_RE.match(func_line.lstrip()): # ignore leading spaces
               self.wait_for_return_stack = self.get_stack_code_IDs()
               return
@@ -786,6 +808,27 @@ class PGLogger(bdb.Bdb):
 
           if self.cumulative_mode:
             self.zombie_frames.append(top_frame)
+
+        # kinda tricky to get the timing right -- basically, as soon as you
+        # make a call, set sys.stdout to the stream for the appropriate
+        # module, and as soon as you return, set sys.stdout to the
+        # stream for your caller's module. we need to do this on the
+        # return call since we want to immediately start picking up
+        # prints to stdout *right after* this function returns
+        if self.separate_stdout_by_module:
+          if event_type == 'call':
+            if topframe_module in self.stdout_by_module:
+              sys.stdout = self.stdout_by_module[topframe_module]
+            else:
+              sys.stdout = self.stdout_by_module["<other>"]
+          elif event_type == 'return' and self.curindex > 0:
+            prev_tos = self.stack[self.curindex - 1]
+            prev_topframe = prev_tos[0]
+            prev_topframe_module = prev_topframe.f_globals['__name__']
+            if prev_topframe_module in self.stdout_by_module:
+              sys.stdout = self.stdout_by_module[prev_topframe_module]
+            else:
+              sys.stdout = self.stdout_by_module["<other>"]
 
 
         # only render zombie frames that are NO LONGER on the stack
@@ -1108,7 +1151,7 @@ class PGLogger(bdb.Bdb):
                              ordered_globals=[],
                              stack_to_render=[],
                              heap={},
-                             stdout=get_user_stdout(tos[0]))
+                             stdout=self.get_user_stdout())
         else:
           trace_entry = dict(line=lineno,
                              event=event_type,
@@ -1117,7 +1160,7 @@ class PGLogger(bdb.Bdb):
                              ordered_globals=ordered_globals,
                              stack_to_render=stack_to_render,
                              heap=self.encoder.get_heap(),
-                             stdout=get_user_stdout(tos[0]))
+                             stdout=self.get_user_stdout())
 
         # optional column numbers for greater precision
         # (only relevant in Py2crazy, a hacked CPython that supports column numbers)
@@ -1135,8 +1178,13 @@ class PGLogger(bdb.Bdb):
               trace_entry['expr_width'] = v.extent
               trace_entry['opcode'] = v.opcode
 
+        # set a 'custom_module_name' field if we're executing in a module
+        # that's not the __main__ script:
+        if topframe_module != "__main__":
+          trace_entry['custom_module_name'] = topframe_module
 
         # TODO: refactor into a non-global
+        # these are now deprecated as of 2016-06-28
         global __html__, __css__, __js__
         if __html__:
           trace_entry['html_output'] = __html__
@@ -1193,7 +1241,7 @@ class PGLogger(bdb.Bdb):
         self.forget()
 
 
-    def _runscript(self, script_str, custom_globals=None):
+    def _runscript(self, script_str):
         self.executed_script = script_str
         self.executed_script_lines = self.executed_script.splitlines()
 
@@ -1265,9 +1313,17 @@ class PGLogger(bdb.Bdb):
         user_builtins['setCSS'] = setCSS
         user_builtins['setJS'] = setJS
 
-        user_stdout = StringIO.StringIO()
-
-        sys.stdout = user_stdout
+        if self.separate_stdout_by_module:
+          self.stdout_by_module["__main__"] = StringIO.StringIO()
+          if self.custom_modules:
+            for module_name in self.custom_modules:
+              self.stdout_by_module[module_name] = StringIO.StringIO()
+          self.stdout_by_module["<other>"] = StringIO.StringIO() # catch-all for all other modules we're NOT tracing
+          sys.stdout = self.stdout_by_module["<other>"] # start with <other>
+        else:
+          # default -- a single unified stdout stream
+          self.user_stdout = StringIO.StringIO()
+          sys.stdout = self.user_stdout
 
         self.ORIGINAL_STDERR = sys.stderr
 
@@ -1275,14 +1331,20 @@ class PGLogger(bdb.Bdb):
         # errors, will be silently ignored. WEIRD!
         #sys.stderr = NullDevice # silence errors
 
-        user_globals = {"__name__"    : "__main__",
-                        "__builtins__" : user_builtins,
-                        "__user_stdout__" : user_stdout,
-                        # sentinel value for frames deriving from a top-level module
-                        "__OPT_toplevel__": True}
+        user_globals = {}
 
-        if custom_globals:
-            user_globals.update(custom_globals)
+        # if there are custom_modules, 'import' them into user_globals,
+        # which emulates "from <module> import *"
+        if self.custom_modules:
+            for mn in self.custom_modules:
+                # http://code.activestate.com/recipes/82234-importing-a-dynamically-generated-module/
+                new_m = imp.new_module(mn)
+                exec(self.custom_modules[mn], new_m.__dict__) # exec in custom globals
+                user_globals.update(new_m.__dict__)
+
+        # important: do this LAST to get precedence over values in custom_modules
+        user_globals.update({"__name__"    : "__main__",
+                             "__builtins__" : user_builtins})
 
         try:
           # enforce resource limits RIGHT BEFORE running script_str
@@ -1415,14 +1477,26 @@ class PGLogger(bdb.Bdb):
 
       self.trace = res
 
-      return self.finalizer_func(self.executed_script, self.trace)
+      if self.custom_modules:
+        # when there's custom_modules, call with a dict as the first parameter
+        return self.finalizer_func(dict(main_code=self.executed_script,
+                                        custom_modules=self.custom_modules),
+                                   self.trace)
+      else:
+        # common case
+        return self.finalizer_func(self.executed_script, self.trace)
 
 
 import json
 
 # the MAIN meaty function!!!
 def exec_script_str(script_str, raw_input_lst_json, options_json, finalizer_func):
-  options = json.loads(options_json)
+  if options_json:
+    options = json.loads(options_json)
+  else:
+    # defaults
+    options = {'cumulative_mode': False,
+               'heap_primitives': False, 'show_only_outputs': False}
 
   py_crazy_mode = ('py_crazy_mode' in options and options['py_crazy_mode'])
 
@@ -1472,6 +1546,7 @@ def exec_script_str_local(script_str, raw_input_lst_json, cumulative_mode, heap_
     return logger.finalize()
 
 
+# deprecated?!?
 def exec_str_with_user_ns(script_str, user_ns, finalizer_func):
   logger = PGLogger(False, False, False, finalizer_func, disable_security_checks=True)
 

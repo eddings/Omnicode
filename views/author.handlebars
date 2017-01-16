@@ -5,34 +5,144 @@
 	<link rel="shortcut icon" href="">
 	<link rel="stylesheet" type="text/css" href="../stylesheets/css/skeleton.css" media="screen" />
     <!-- Lato font -->
-    <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Lato:100,400,700' type='text/css'>
+    <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Lato:100,200,300,400,500,600,700' type="text/css">
+    <!-- Bootstrap -->
+    <link href="../bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css">
+    <!-- jQuery UI -->
+    <link rel="stylesheet" href="../stylesheets/css/jquery-ui.css" type="text/css">
 </head>
 <body>
+
+<!--
+//////////////////////////////////////
+// Login Modal 
+//////////////////////////////////////
+-->
 {{#unless authorLoggedIn}}
-<!-- Login Modal -->
-<div id="author-login-modal" class="login-modal">
-    <div class="author-login-modal-content">
-        <p><b>If you know the lab ID, please enter</b></p>
-        <input id="existing-labID-input" name="existing-labID-input" type="text">
-        <button id="existing-labID-btn">login</button>
-        <p id="existing-labID-status" style="display: inline; color: red"></p>
-        <small style="display: block;">If you want to create a lab, please enter a new lab ID and an author user name</small>
-        <input id="new-labID-input" name="new-labID-input" type="text">
-        <input id="new-labID-author-input" name="new-labID-author-input" type="text">
-        <button id="new-labID-btn">create</button>
-        <p id="new-labID-status" style="display: inline; color: red"></p>
+<div id="login-modal" class="login-modal">
+    <div id="lab-id-modal-content" class="lab-id-modal-content">
+        <p><b>Enter a new lab ID</b></p>
+        <label for="lab-id-input">Lab ID</label>
+        <input id="lab-id-input" name="lab-id-input" type="text">       
+        <button id="lab-id-go-btn">Go</button>
+        <p id="lab-id-modal-status" style="display: inline; color: red"></p>
+    </div>
+    <div id="signup-modal-content" class="signup-modal-content" style="display: none;">
+        <p><b>Sign up</b></p>
+        <table>
+            <tr>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+            <tr>
+                <td style="text-align: left;"><label for="user-name-signup-input">User name</label></td>
+                <td><input id="user-name-signup-input" name="user-name-signup-input" type="text"></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td style="text-align: left;"><label for="user-pass1-signup-input">Password</label></td>
+                <td><input id="user-pass1-signup-input" name="user-pass1-signup-input" type="text"></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td style="text-align: left;"><label for="user-pass2-signup-input">Confirm your password</label></td>
+                <td><input id="user-pass2-signup-input" name="user-pass2-signup-input" type="text"></td>
+                <td><button id="login-modal-signup-btn">sign up</button></td>
+            </tr>
+        </table>
+        <p id="login-modal-signup-status" style="display: inline; color: red"></p>
+        <a id="lab-id-link" href="#">Give a different lab ID</a>
+        <br>
+        <a href="/">Go to the main page</a>
     </div>
 </div>
 {{/unless}}
+
+<!--
+//////////////////////////////////////
+// Main navigation section; info div
+//////////////////////////////////////
+-->
 <div id="info" class="info">
     <p style="display: inline;">
-        <a href="/lab/{{labID}}?user={{user.userName}}">{{labID}}</a>
-        <img id="user-icon" src="images/user.png"/>
+        <p id="lab-lang" style="display: none;">{{language}}</p>
+        <a id="lab-id-link" href="/lab/{{labID}}?user={{user.userName}}&password={{user.password}}"><img id="lab-icon" src="../images/lab.png"/>{{labID}}</a>
         {{#if authorLoggedIn}}
-        <p style="display: inline;" id="user-name">{{user.userName}}</p>
+            <p id="user-name"><img id="user-icon" src="../images/user.png"/>{{user.userName}}</p>
+            <input type="hidden" id="user-password" value="{{user.password}}">
+            <a id="sign-out" href="/lab/{{labID}}">Sign out</a>
         {{/if}}
-        <a href="/question/{{labID}}?user={{user.userName}}">Question Board</a>
+        <p><a href="/question/{{labID}}?user={{user.userName}}&password={{user.password}}"><img id="question-icon" src="../images/question.png"/>Question Board</a></p>
     </p>
 </div>
+
+<!--
+//////////////////////////////////////
+// Code Editor
+//////////////////////////////////////
+-->
+<div id="editor" class="code-editor">
+</div>
+
+<!--
+//////////////////////////////////////
+// Code Editor Controls
+//////////////////////////////////////
+-->
+<div id="code-button" class="code-button">
+    <button id="viewBtn" class="btn btn-primary btn-sm">View</button>
+    <button id="runBtn" class="btn btn-primary btn-sm">Run</button>
+    <button id="debugBtn" class="btn btn-defautl btn-sm">Debug</button>
+    <button id="saveBtn" class="btn btn-primary btn-sm">Save &amp; publish</button>
+    <p id="editor-status" style="display: inline-block;"></p>
+</div>
+
+<!--
+//////////////////////////////////////
+// Console
+//////////////////////////////////////
+-->
+<div id="console">
+</div>
+<a id="console-clear" href="#">clear</a>
+
+<!--
+//////////////////////////////////////
+// Debugger Panel
+//////////////////////////////////////
+-->
+<div id="debugger-view-div"></div>
+<div id="debugger-range-slider"></div>
+<span id="debugger-range-slider-span"></span>
+
+<!--
+//////////////////////////////////////
+// Context Menu
+//////////////////////////////////////
+-->
+<nav id="context-menu" class="context-menu">
+    <ul class="context-menu__items">
+        <li class="context-menu__item">
+            <a href="#" id="menu-debug" class="context-menu__link"><i class="fa fa-edit"></i> Debug</a>
+        </li>
+        <li class="context-menu__item">
+            <a href="#" id="menu-view-a-hint" class="context-menu__link"><i class="fa fa-edit"></i> View a hint</a>
+        </li>
+        <li class="context-menu__item">
+            <a href="#" id="menu-ask-a-question" class="context-menu__link"><i class="fa fa-edit"></i> Ask a quetsion</a>
+        </li>
+    </ul>
+</nav>
+
+<script src="../javascripts/jquery-3.1.1.min.js" type="text/javascript" charset="utf-8"></script> <!-- jQuery -->
+<script src="../javascripts/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script> <!-- Ace -->
+<script src="../javascripts/jquery.highlight-5.js" type="text/javascript" charset="utf-8"></script> <!-- Highlight -->
+<script src="../socket.io/socket.io.js" type="text/javascript" charset="utf-8"></script> <!-- Socket.io generated -->
+<script src="../javascripts/jquery-ui.min.js" type="text/javascript" charset="utf-8"></script> <!-- jQuery UI -->
+<script src="../bootstrap/js/bootstrap.min.js" type="text/javascript" charset="utf-8"></script> <!-- Bootstrap -->
+<script src="../javascripts/globals.js" type="text/javascript" charset="utf-8"></script> <!-- Custom Constants -->
+<script src="../javascripts/jqconsole.js" type="text/javascript" charset="utf-8"></script> <!-- jqConsole -->
+<script src="../javascripts/author.js" type="text/javascript" charset="utf-8"></script> <!-- Custom controller code -->
 </body>
 </html>

@@ -3,6 +3,7 @@ class EntryController {
         this.searchBox = $('#labs');
         this.searchBoxFirstClicked = false;
         this.goBtn = $('#goBtn'); //ui-button ui-widget ui-corner-all
+        this.createLabLink = $('#create-lab-link');
 
         this.labIDs = [];
 
@@ -13,6 +14,7 @@ class EntryController {
         this.initializeLabIDs();
         this.addSearchBoxHandler();
         this.addGoBtnHandler();
+        this.addCreateLabLinkHandler();
 
         this.goBtn.attr('disabled', true);
     }
@@ -64,6 +66,13 @@ class EntryController {
     addGoBtnHandler() {
         this.goBtn.on('click', (e) => {
             window.location.href = LAB_URL + '/' + this.searchBox.val();
+        });
+    }
+
+    addCreateLabLinkHandler() {
+        this.createLabLink.on('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/author';
         });
     }
 }

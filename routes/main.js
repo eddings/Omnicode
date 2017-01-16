@@ -22,6 +22,7 @@ module.exports = function(io, db) {
 			if (err) {
 				console.log(err);
 				res.sendStatus(500);
+				return;
 			} else {
 				if (docs.length !== 1) {
 					res.status(500).render('error',
@@ -62,6 +63,7 @@ module.exports = function(io, db) {
 				if (err) {
 					console.log(err);
 					res.sendStatus(500);
+					return;
 				}
 
 				docs.forEach((doc, idx) => {
@@ -69,7 +71,12 @@ module.exports = function(io, db) {
 				});
 
 				res.status(200).send(data);
+				return;
 			});
+		} else {
+			console.log("Not supported request");
+			res.status(500).send("Not supported request");
+			return;
 		}
 	});
 
@@ -203,7 +210,10 @@ module.exports = function(io, db) {
 								role: body.role,
 								checkpointStatus: body.checkpointStatus,
 								code: body.code,
-								recommendationPaneContent: body.recommendationPaneContent
+								codeEdits: body.codeEdits,
+								console: body.console,
+								debugger: body.debugger,
+								notificationPaneContent: body.notificationPaneContent
 							};
 							db.update({labID: labID}, {$push: {users: newUser}}, {}, () => {});
 
@@ -247,23 +257,25 @@ module.exports = function(io, db) {
 			db.find({labID: labID}, (err, docs) => {
 				if (err) {
 					console.log(err);
-					res.sendStatus(500);
+					res.status(500).send('DB find operation error');
+					return;
+				}
+				
+				if (docs.length !== 1) {
+					console.log("Error, lab doc is not uniquified by labID");
+					res.status(500).render('error',
+					{
+						title: 'Labyrinth - ' + labID,
+						errorMsg: "Something went wrong ... Please check the lab ID and the URL"
+					});
+					return;
+				}
+
+				var userInDB = docs[0].users[findUser(docs[0].users, userName)];
+				if (userInDB) {
+					res.status(200).send({ok: true, userData: userInDB});
 				} else {
-					if (docs.length !== 1) {
-						console.log("Error, lab doc is not uniquified by labID");
-						res.status(500).render('error',
-						{
-							title: 'Labyrinth - ' + labID,
-							errorMsg: "Something went wrong ... Please check the lab ID and the URL"
-						});
-					} else {
-						var userInDB = docs[0].users[findUser(docs[0].users, userName)];
-						if (userInDB) {
-							res.status(200).send({ok: true, userData: userInDB});
-						} else {
-							res.status(200).send({ok: false, reason: "User name doesn't exist"});
-						}
-					}
+					res.status(200).send({ok: false, reason: "User name doesn't exist"});
 				}
 			});
 		} else if (command === "codeEditSave") {

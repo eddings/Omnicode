@@ -15,13 +15,20 @@ table, tr, td, th, td {
 }
 
 /* Lab page skeleton */
+/*
+.whole-pane {
+    position: absolute;
+    left: 5px;
+    right: 5px;
+    width: ~"calc(100vw - 12px)";  
+}
+*/
 .right-pane {
 	position: absolute;
 	left: 50vw;
 	right: 10px;
     width: ~"calc(50vw - 18px)";
 }
-
 .left-pane {
 	position: absolute;
     left: 10px;
@@ -125,6 +132,49 @@ table, tr, td, th, td {
         top: ~"calc(100vh - 10px)";
         height: 10px;
     }
+    /* Author view */
+    /*
+    .author-code-editor {
+        .whole-pane;
+        top: 60px;
+        bottom: 175px;
+        height: ~"calc(100vh - 205px)";
+    }
+    .author-code-button {
+        .whole-pane;
+        top: ~"calc(100vh - 185px - 10px + 60px)";
+        height: 20px;
+    }
+    .author-console {
+        .whole-pane;
+        top: ~"calc(100vh - 155px)";
+        height: 145px;
+    }
+    .author-console-clear {
+        .whole-pane;
+        top: ~"calc(100vh - 10px)";
+        height: 10px;
+    }
+    .author-debuggerViewDiv {
+        .whole-pane;
+        display: none;
+        top: ~"calc(100vh - 155px)";
+        height: 130px;
+        overflow-y: scroll;
+    }
+    .author-debuggerRangeSlider {
+        .whole-pane;
+        display: none;
+        top: ~"calc(100vh - 25px)";
+        height: 10px;
+    }
+    .author-debuggerRangeSliderSpan {
+        .whole-pane;
+        display: none;
+        top: ~"calc(100vh - 10px)";
+        height: 10px;
+    }
+    */
 }
 
 /* Large height screens */
@@ -145,25 +195,68 @@ table, tr, td, th, td {
         top: ~"calc(100vh - 200px)";
         height: 180px;
     }
-    #debuggerViewDiv {
+    #debugger-view-div {
         display: none;
         .right-pane;
         top: ~"calc(100vh - 200px)";
         height: 155px;
         overflow-y: scroll;
     }
-    #debuggerRangeSlider {
+    #debugger-range-slider {
         display: none;
         .right-pane;
         top: ~"calc(100vh - 25px)";
         height: 10px;
     }
-    #debuggerRangeSliderSpan {
+    #debugger-range-slider-span {
         display: none;
         .right-pane;
         top: ~"calc(100vh - 10px)";
         height: 10px;
     }
+    /* Author view */
+    /*
+    .author-code-editor {
+        .whole-pane;
+        top: 60px;
+        bottom: 220px;
+        height: ~"calc(100vh - 310px)";
+    }
+    .author-code-button {
+        .whole-pane;
+        top: ~"calc(100vh - 230px - 15px)";
+        height: 20px;
+    }
+    .author-console {
+        .whole-pane;
+        top: ~"calc(100vh - 210px)";
+        height: 180px;
+    }
+    .author-console-clear {
+        .whole-pane;
+        top: ~"calc(100vh - 30px)";
+        height: 10px;
+    }
+    .author-debugger-view-div {
+        .whole-pane;
+        display: none;
+        top: ~"calc(100vh - 200px)";
+        height: 155px;
+        overflow-y: scroll;
+    }
+    .author-debugger-range-slider {
+        .whole-pane;
+        display: none;
+        top: ~"calc(100vh - 25px)";
+        height: 10px;
+    }
+    .author-debugger-range-slider-span {
+        .whole-pane;
+        display: none;
+        top: ~"calc(100vh - 10px)";
+        height: 10px;
+    }
+    */
 }
 
 .checkpoint-status-img img, .checkpoint-status-img div {
@@ -283,7 +376,7 @@ table, tr, td, th, td {
     width: 80%;
 }
 
-.signup-modal-content {
+.signup-modal-content, .lab-id-modal-content {
     .login-modal-content;
 }
 
