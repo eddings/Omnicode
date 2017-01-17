@@ -239,7 +239,7 @@ class AuthorController {
 		this.saveBtn.on('click', (e) => {
 			// Save the lab material and maybe announce (send a notification) to students
 			var lab = {
-				labDescHTML: this.labDesc,
+				labDescHTML: this.labDescHTML,
 				skeletonCode: this.skeletonCode,
 				checkpoints: this.checkpoints,
 			}

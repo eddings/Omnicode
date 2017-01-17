@@ -873,7 +873,7 @@ class Lab {
 						// TODO: Why creating a new object everytime?
 						//var testParser = new TestParser(this.userData.code);
 						//var parsedObj = testParser.parse();
-						this.editorObj.code = parsedObj.code; // inject the last saved code w/o test cases
+						//this.editorObj.code = parsedObj.code; // inject the last saved code w/o test cases
 						
 						this.consoleObj.Write(this.userData.console.content, 'jqconsole-output');
 						this.consoleObj.SetHistory(this.userData.console.history);
