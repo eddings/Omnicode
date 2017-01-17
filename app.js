@@ -97,21 +97,24 @@ fs.readFile('skeleton.py', 'utf8', (err, data) => {
     var intro_programming_doc = {
         labID: "intro_programming",
         labDoc: {
-            labDesc: labDesc,
+            labDescHTML: labDesc,
             skeletonCode: '',
             checkpoints: [
                 {
-                    desc: ckpt1_desc,
+                    descHTML: ckpt1_desc,
+                    testCasesHTML: ''
                     testCases: [], // {source, want}
                     quetsions: []
                 },
                 {
-                    desc: ckpt2_desc,
+                    descHTML: ckpt2_desc,
+                    testCasesHTML: ''
                     testCases: [],
                     questions: []
                 },
                 {
-                    desc: ckpt3_desc,
+                    descHTML: ckpt3_desc,
+                    testCasesHTML: ''
                     testCases: [],
                     questions: []
                 }

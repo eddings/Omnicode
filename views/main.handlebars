@@ -144,10 +144,15 @@
 
     <!-- Lab description -->
     <div id="lab-desc" class="lab-desc">
-        <p>{{{labDoc.labDesc}}}</p>
+        {{{labDoc.labDescHTML}}}
     </div>
 
     <!-- Checkpoints -->
+    {{#each labDoc.checkpoints}}
+        {{{descHTML}}}
+        {{{testCasesHTML}}}
+    {{/each}}
+    <!--
     {{#each labDoc.checkpoints}}
     <div id="checkpoint{{@index}}" class="right-panel">
         <p style="text-align: center;"><b><img id="checkpoint{{@../index}}-command{{@index}}-state-img" src="../images/minus.png"/>{{title}}</b><p>
@@ -181,6 +186,7 @@
         {{/if}}
     </div>
     {{/each}}
+    -->
 </div>
 
 <!-- Code Editor -->

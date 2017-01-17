@@ -16,7 +16,7 @@ class AuthorController {
 
 		// Status info
 		this.labID = '';
-		this.labDesc = '';
+		this.labDescHTML = '';
 		this.checkpoints = [];
 		this.skeletonCode = '';
 
@@ -175,6 +175,7 @@ class AuthorController {
 			tableHTML +=
 			'</table>'
 
+			checkpoints[ckptNum].testCasesHTML = tableHTML;
 			return tableHTML;
 		}
 
@@ -194,13 +195,14 @@ class AuthorController {
 				if (docstrings.length > 0) {
 					var doc = docstrings[0];
 					var checkpoints = docstrings.slice(1);
-					var labDesc = markdown.toHTML(doc.docstring);
-					this.labDoc.append(labDesc);
-					this.labDesc = labDesc;
+					var labDescHTML = markdown.toHTML(doc.docstring);
+					this.labDoc.append(labDescHTML);
+					this.labDescHTML = labDescHTML;
 					checkpoints.forEach((cp, idx) => {
-						var checkpointDesc = markdown.toHTML(cp.docstring.split('------')[0]);
-						this.checkpoints.push({desc: checkpointDesc, testCases: [], questions: []});
-						this.labDoc.append(checkpointDesc);
+						var checkpointDescHTML = markdown.toHTML(cp.docstring.split('------')[0]);
+						this.checkpoints.push({descHTML: checkpointDesc, testCasesHTML: '', testCases: [], questions: []});
+						
+						this.labDoc.append(checkpointDescHTML);
 						this.labDoc.append(createTestcaseHTML(this.checkpoints, cp.examples, idx));
 					});
 				}
@@ -237,7 +239,7 @@ class AuthorController {
 		this.saveBtn.on('click', (e) => {
 			// Save the lab material and maybe announce (send a notification) to students
 			var lab = {
-				labDesc: this.labDesc,
+				labDescHTML: this.labDesc,
 				skeletonCode: this.skeletonCode,
 				checkpoints: this.checkpoints,
 			}

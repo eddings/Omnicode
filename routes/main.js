@@ -55,9 +55,6 @@ module.exports = function(io, db) {
 						}
 					});
 
-					console.log('labDoc');
-					console.log(docs[0].labDoc);
-
 				  	return res.status(200).render(
 				  		'main',
 				  		{ 

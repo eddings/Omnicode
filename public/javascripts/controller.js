@@ -871,8 +871,8 @@ class Lab {
 					if (data.ok) {
 						this.userData = data.userData;
 						// TODO: Why creating a new object everytime?
-						var testParser = new TestParser(this.userData.code);
-						var parsedObj = testParser.parse();
+						//var testParser = new TestParser(this.userData.code);
+						//var parsedObj = testParser.parse();
 						this.editorObj.code = parsedObj.code; // inject the last saved code w/o test cases
 						
 						this.consoleObj.Write(this.userData.console.content, 'jqconsole-output');
