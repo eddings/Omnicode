@@ -16,6 +16,9 @@ class AuthorController {
 
 		// Status info
 		this.labID = '';
+		this.labDesc = '';
+		this.checkpoints = [];
+		this.skeletonCode = '';
 
 		// Editor related
 		this.editor = null;
@@ -23,7 +26,9 @@ class AuthorController {
 
 		// Editor control related
 		this.loadFileInput = $('#loadFileInput');
+		this.saveBtn = $('#saveBtn');
 
+		/*
 		// Console related
 		this.console = $('#console');
 		this.consoleObj = null;
@@ -35,6 +40,7 @@ class AuthorController {
 		this.debuggerRangeSliderSpan = $('#debugger-range-slider-span');
 		this.debugTraces = [];
 		this.debugStr = '';
+		*/
 
 		// Lab doc panel
 		this.labDoc = $('#lab-doc');
@@ -138,10 +144,11 @@ class AuthorController {
 
 	addBtnHandlers() {
 		this.addLoadBtnHandler();
+		this.addSaveBtnHandler();
 	}
 
 	sendLoadRequest(fileName, fileContent) {
-		function createTestcaseHTML(testcases, ckptNum) {
+		function createTestcaseHTML(checkpoints, testcases, ckptNum) {
 			if (!testcases || testcases.length === 0) {
 				return;
 			}
@@ -155,6 +162,7 @@ class AuthorController {
 					'<th>Status</th>' +
 				'</tr>';
 			testcases.forEach((ex, idx) => {
+				checkpoints[ckptNum].testCases.push({source: ex.source, want: ex.want});
 				tableHTML +=
 				'<tr>' +
 					'<td>' + idx + '</td>' +
@@ -169,7 +177,7 @@ class AuthorController {
 
 			return tableHTML;
 		}
-		
+
 		var request = {
 			labID: LAB_ID,
 			command: LOAD_COMMAND,
@@ -186,16 +194,18 @@ class AuthorController {
 				if (docstrings.length > 0) {
 					var doc = docstrings[0];
 					var checkpoints = docstrings.slice(1);
-					console.log('say what?');
-					console.log(this);
-					console.log(this.labDoc);
-					this.labDoc.append(markdown.toHTML(doc.docstring));
+					var labDesc = markdown.toHTML(doc.docstring);
+					this.labDoc.append(labDesc);
+					this.labDesc = labDesc;
 					checkpoints.forEach((cp, idx) => {
-						this.labDoc.append(markdown.toHTML(cp.docstring.split('------')[0]));
-						this.labDoc.append(createTestcaseHTML(cp.examples, idx));
+						var checkpointDesc = markdown.toHTML(cp.docstring.split('------')[0]);
+						this.checkpoints.push({desc: checkpointDesc, testCases: [], questions: []});
+						this.labDoc.append(checkpointDesc);
+						this.labDoc.append(createTestcaseHTML(this.checkpoints, cp.examples, idx));
 					});
 				}
 				this.code = data.skeleton;
+				this.skeletonCode = this.code;
 			},
 			error: (req, status, err) => {
 				console.log(err);
@@ -220,6 +230,24 @@ class AuthorController {
 			};
 
 			fr.readAsText(file);
+		});
+	}
+
+	addSaveBtnHandler() {
+		this.saveBtn.on('click', (e) => {
+			// Save the lab material and maybe announce (send a notification) to students
+			var labDB = {
+				labID: LAB_ID,
+				labDoc: {
+					labDesc: this.labDesc,
+					skeletonCode: this.skeletonCode,
+					checkpoints: this.checkpoints,
+					users: [],
+					timelineQuestions: []
+				}
+			}
+
+			db.insert(labDB);
 		});
 	}
 

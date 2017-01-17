@@ -90,7 +90,7 @@ fs.readFile('skeleton.py', 'utf8', (err, data) => {
     var ckpt3_title = "clamp(thelist, min, max)";
     var ckpt3_desc = 
     "<br><b>Function</b> clamp(thelist,min,max), " +
-    "unlike the previous two functions, does alter thelist. This function is a procedure " +
+    "unlike the previous two functions, clamp does alter thelist. This function is a procedure " +
     "with no return value. You might want to look at test cases to see how we would test a " +
     "procedure like this.</p>";
 
@@ -98,25 +98,20 @@ fs.readFile('skeleton.py', 'utf8', (err, data) => {
         labID: "intro_programming",
         labDoc: {
             labDesc: labDesc,
+            skeletonCode: '',
             checkpoints: [
                 {
-                    title: ckpt1_title,
                     desc: ckpt1_desc,
-                    commandBlocks: [],
-                    testCases: [],
+                    testCases: [], // {source, want}
                     quetsions: []
                 },
                 {
-                    title: ckpt2_title,
                     desc: ckpt2_desc,
-                    commandBlocks: [],
                     testCases: [],
                     questions: []
                 },
                 {
-                    title: ckpt3_title,
                     desc: ckpt3_desc,
-                    commandBlocks: [],
                     testCases: [],
                     questions: []
                 }
