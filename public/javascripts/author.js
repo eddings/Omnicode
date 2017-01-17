@@ -236,21 +236,21 @@ class AuthorController {
 	addSaveBtnHandler() {
 		this.saveBtn.on('click', (e) => {
 			// Save the lab material and maybe announce (send a notification) to students
-			var labDB = {
+			var lab = {
 				labID: LAB_ID,
 				labDoc: {
 					labDesc: this.labDesc,
 					skeletonCode: this.skeletonCode,
 					checkpoints: this.checkpoints,
-					users: [],
-					timelineQuestions: []
-				}
+				},
+				users: [],
+				timelineQuestions: []
 			}
 
 			var request = {
 				labID: LAB_ID,
 				command: SAVE_AND_PUBLISH_COMMAND,
-				doc: labDB
+				doc: lab
 			};
 
 			$.post({

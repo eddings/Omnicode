@@ -108,10 +108,11 @@ module.exports = function(io, db) {
 					return res.status(200).send({ok: false, reason: "Lab ID already exists"});
 				}
 
-			    var newLabDoc = {
+			    var newLab = {
 			        labID: labID,
 			        labDoc: {
 			            labDesc: '',
+			            skeletonCode: '',
 			            checkpoints: []
 			        },
 			        users: [{
@@ -127,7 +128,7 @@ module.exports = function(io, db) {
 					}],
 			        timelineQuestions: []
 			    };
-				db.insert(newLabDoc);
+				db.insert(newLab);
 				return res.status(200).send({ok: true});
 			});
 		} else if (command === "load") {
@@ -220,7 +221,12 @@ module.exports = function(io, db) {
 			//////////////////////////////////////////////
 			var labID = body.labID;
 			var doc = body.doc;
-			db.insert(doc);
+
+			var labDocSearchStr = 'labDoc';
+			var labDocObj = {};
+			labDocObj[labDocSearchStr] = doc;
+
+			db.update({labID: labID}, {$set: labDocObj}, {}, () => {});
 			res.status(200).send({ok: true, reason: "The lab is saved and published"});
 		} else {
 			console.log("Unsupported command");
