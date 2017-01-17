@@ -141,6 +141,35 @@ class AuthorController {
 	}
 
 	sendLoadRequest(fileName, fileContent) {
+		function createTestcaseHTML(testcases, ckptNum) {
+			if (!testcases || testcases.length === 0) {
+				return;
+			}
+
+			var tableHTML =
+			'<table>' +
+				'<tr>' +
+					'<th>#</th>' +
+					'<th>Testcase</th>' +
+					'<th>Expected</th>' +
+					'<th>Status</th>' +
+				'</tr>';
+			testcases.forEach((ex, idx) => {
+				tableHTML +=
+				'<tr>' +
+					'<td>' + idx + '</td>' +
+					'<td>' + ex.source + '</td>' +
+					'<td>' + ex.want + '</td>' +
+					'<td><img id="case' + ckptNum + idx + '" src="../images/minus.png"/></td>' +
+				'</tr>';
+			});
+
+			tableHTML +=
+			'</table>'
+
+			return tableHTML;
+		}
+		
 		var request = {
 			labID: LAB_ID,
 			command: LOAD_COMMAND,
@@ -177,35 +206,6 @@ class AuthorController {
 	}
 
 	addLoadBtnHandler() {
-		function createTestcaseHTML(testcases, ckptNum) {
-			if (!testcases || testcases.length === 0) {
-				return;
-			}
-
-			var tableHTML =
-			'<table>' +
-				'<tr>' +
-					'<th>#</th>' +
-					'<th>Testcase</th>' +
-					'<th>Expected</th>' +
-					'<th>Status</th>' +
-				'</tr>';
-			testcases.forEach((ex, idx) => {
-				tableHTML +=
-				'<tr>' +
-					'<td>' + idx + '</td>' +
-					'<td>' + ex.source + '</td>' +
-					'<td>' + ex.want + '</td>' +
-					'<td><img id="case' + ckptNum + idx + '" src="../images/minus.png"/></td>' +
-				'</tr>';
-			});
-
-			tableHTML +=
-			'</table>'
-
-			return tableHTML;
-		}
-
 		this.loadFileInput.on('change', (e) => {
 			if (!e.target.files || !e.target.files[0]) {
 				alert("Please select a file");
