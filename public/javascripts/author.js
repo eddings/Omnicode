@@ -140,6 +140,42 @@ class AuthorController {
 		this.addLoadBtnHandler();
 	}
 
+	sendLoadRequest(fileName, fileContent) {
+		var request = {
+			labID: LAB_ID,
+			command: LOAD_COMMAND,
+			fileName: fileName,
+			fileContent: fileContent,
+			language: LAB_LANG
+		};
+
+		$.post({
+			url: AUTHOR_URL,
+			data: JSON.stringify(request),
+			success: (data) => {
+				var docstrings = JSON.parse(data.docstrings);
+				if (docstrings.length > 0) {
+					var doc = docstrings[0];
+					var checkpoints = docstrings.slice(1);
+					console.log('say what?');
+					console.log(this);
+					console.log(this.labDoc);
+					this.labDoc.append(markdown.toHTML(doc.docstring));
+					checkpoints.forEach((cp, idx) => {
+						this.labDoc.append(markdown.toHTML(cp.docstring.split('------')[0]));
+						this.labDoc.append(createTestcaseHTML(cp.examples, idx));
+					});
+				}
+				this.code = data.skeleton;
+			},
+			error: (req, status, err) => {
+				console.log(err);
+			},
+			dataType: "json",
+			contentType: 'application/json'
+		});
+	}
+
 	addLoadBtnHandler() {
 		function createTestcaseHTML(testcases, ckptNum) {
 			if (!testcases || testcases.length === 0) {
@@ -170,42 +206,6 @@ class AuthorController {
 			return tableHTML;
 		}
 
-		function sendViewRequest(fileName, fileContent) {
-			var request = {
-				labID: LAB_ID,
-				command: LOAD_COMMAND,
-				fileName: fileName,
-				fileContent: fileContent,
-				language: LAB_LANG
-			};
-
-			$.post({
-				url: AUTHOR_URL,
-				data: JSON.stringify(request),
-				success: (data) => {
-					var docstrings = JSON.parse(data.docstrings);
-					if (docstrings.length > 0) {
-						var doc = docstrings[0];
-						var checkpoints = docstrings.slice(1);
-						console.log('say what?');
-						console.log(this);
-						console.log(this.labDoc);
-						this.labDoc.append(markdown.toHTML(doc.docstring));
-						checkpoints.forEach((cp, idx) => {
-							this.labDoc.append(markdown.toHTML(cp.docstring.split('------')[0]));
-							this.labDoc.append(createTestcaseHTML(cp.examples, idx));
-						});
-					}
-					this.code = data.skeleton;
-				},
-				error: (req, status, err) => {
-					console.log(err);
-				},
-				dataType: "json",
-				contentType: 'application/json'
-			});
-		}
-
 		this.loadFileInput.on('change', (e) => {
 			if (!e.target.files || !e.target.files[0]) {
 				alert("Please select a file");
@@ -216,7 +216,7 @@ class AuthorController {
 			var fr = new FileReader();
 			fr.onload = (e) => {
 				var fileContent = e.target.result;
-				sendViewRequest(file.name, fileContent);
+				this.sendLoadRequest(file.name, fileContent);
 			};
 
 			fr.readAsText(file);
