@@ -185,10 +185,11 @@ class AuthorController {
 				success: (data) => {
 					var docstrings = JSON.parse(data.docstrings);
 					if (docstrings.length > 0) {
-						var labdoc = docstrings[0];
+						var doc = docstrings[0];
 						var checkpoints = docstrings.slice(1);
 
-						this.labDoc.append(markdown.toHTML(labdoc.docstring));
+						console.log(this.labDoc);
+						this.labDoc.append(markdown.toHTML(doc.docstring));
 						checkpoints.forEach((cp, idx) => {
 							this.labDoc.append(markdown.toHTML(cp.docstring.split('------')[0]));
 							this.labDoc.append(createTestcaseHTML(cp.examples, idx));
