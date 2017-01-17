@@ -18,12 +18,10 @@ module.exports = function(io, db) {
 
 		db.find({labID: labID}, (err, docs) => {
 			if (err) {
-				console.log('in1');
 				console.error(err);
 				return res.sendStatus(500);
 			} else {
 				if (docs.length !== 1) {
-					console.log('in2');
 					console.log(docs.length);
 					docs.forEach((doc, idx) => {
 						console.log(doc);
@@ -37,8 +35,7 @@ module.exports = function(io, db) {
 					var userName = req.query.user;
 					var password = req.query.password;
 
-					if (!userName || password) {
-						console.log('in3');
+					if (!userName || !password) {
 					  	return res.status(200).render(
 					  		'main',
 					  		{ 
@@ -51,7 +48,6 @@ module.exports = function(io, db) {
 					  		}
 					  	);
 					}
-					console.log('in4');
 
 					var loggedIn = false;
 					docs[0].users.forEach((user, idx) => {
