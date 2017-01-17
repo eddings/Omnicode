@@ -317,7 +317,7 @@ class AuthorController {
 		this.signupBtn.on('click', (e) => {
 			var userName = this.signupUserNameInput.val();
 			if (userName) {
-				var pass1 = this.signupUserPass2Input.val();
+				var pass1 = this.signupUserPass1Input.val();
 				if (pass1) {
 					var pass2 = this.signupUserPass2Input.val();
 					if (pass1 === pass2) {

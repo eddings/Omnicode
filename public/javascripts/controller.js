@@ -491,11 +491,10 @@ class Lab {
 
 		this.loginModalSignupBtn.on("click", (e) => {
 			var userName = this.loginModalSignupInput.val();
-			var pass1 = this.loginModalSignupPass1.val();
-			var pass2 = this.loginModalSignupPass2.val();
-
 			if (userName) {
+				var pass1 = this.loginModalSignupPass1.val();
 				if (pass1) {
+					var pass2 = this.loginModalSignupPass2.val();
 					if (pass1 === pass2) {
 						var userDataObj = {
 							command: SIGNUP_COMMAND,
@@ -510,7 +509,7 @@ class Lab {
 							notificationPaneContent: {}
 						};
 						$.post({
-							url: LAB_URL,
+							url: LAB_URL + "/" + LAB_ID,
 							data: JSON.stringify(userDataObj),
 							success: (data) => {
 								if (data.ok) {
