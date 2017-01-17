@@ -187,7 +187,8 @@ class AuthorController {
 					if (docstrings.length > 0) {
 						var doc = docstrings[0];
 						var checkpoints = docstrings.slice(1);
-
+						console.log('say what?');
+						console.log(this);
 						console.log(this.labDoc);
 						this.labDoc.append(markdown.toHTML(doc.docstring));
 						checkpoints.forEach((cp, idx) => {
