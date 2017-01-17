@@ -72,6 +72,7 @@ module.exports = function(io, db) {
 		});
 	});
 
+/*
 	router.post('/', (req, res, next) => {
 		var body = req.body;
 		var command = body.command; // Command strings are in globals.js
@@ -81,28 +82,42 @@ module.exports = function(io, db) {
 			db.find({}, (err, docs) => {
 				if (err) {
 					console.log(err);
-					res.sendStatus(500);
-					return;
+					return res.sendStatus(500);
 				}
 
 				docs.forEach((doc, idx) => {
 					data.labIDs.push(doc.labID);
 				});
 
-				res.status(200).send(data);
-				return;
+				return res.status(200).send(data);
 			});
 		} else {
 			console.log("Not supported request");
-			res.status(500).send("Not supported request");
-			return;
+			return res.status(500).send("Not supported request");
 		}
 	});
+*/
 
 	router.post('/:labID', (req, res, next) => {
 		var body = req.body;
 		var labID = req.params.labID;
 		var command = body.command;
+
+		if (command === "searchLabIDs") {
+			var data = {labIDs: []};
+			db.find({}, (err, docs) => {
+				if (err) {
+					console.log(err);
+					return res.sendStatus(500);
+				}
+
+				docs.forEach((doc, idx) => {
+					data.labIDs.push(doc.labID);
+				});
+
+				return res.status(200).send(data);
+			});
+		}
 
 		if (command === "run") {
 			var code = body.code;
@@ -207,6 +222,7 @@ module.exports = function(io, db) {
 				}
 			});
 		} else if (command === "signup") {
+			console.log('in1');
 			db.find({ labID: labID }, (err, docs) => {
 				if (err) {
 					console.log(err);
