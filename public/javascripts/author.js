@@ -200,7 +200,7 @@ class AuthorController {
 					this.labDescHTML = labDescHTML;
 					checkpoints.forEach((cp, idx) => {
 						var checkpointDescHTML = markdown.toHTML(cp.docstring.split('------')[0]);
-						this.checkpoints.push({descHTML: checkpointDesc, testCasesHTML: '', testCases: [], questions: []});
+						this.checkpoints.push({descHTML: checkpointDescHTML, testCasesHTML: '', testCases: [], questions: []});
 						
 						this.labDoc.append(checkpointDescHTML);
 						this.labDoc.append(createTestcaseHTML(this.checkpoints, cp.examples, idx));
