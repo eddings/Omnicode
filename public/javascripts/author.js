@@ -14,7 +14,7 @@ class AuthorController {
 		this.signupModalDiv = $('#signup-modal-content');
 		this.labIDLink = $('#lab-id-link');
 
-		// Status
+		// Status info
 		this.labID = '';
 
 		// Editor related
@@ -35,6 +35,9 @@ class AuthorController {
 		this.debuggerRangeSliderSpan = $('#debugger-range-slider-span');
 		this.debugTraces = [];
 		this.debugStr = '';
+
+		// Lab doc panel
+		this.labDoc = $('#lab-doc');
 
 		this.init();
 	}
@@ -150,6 +153,7 @@ class AuthorController {
 				data: JSON.stringify(request),
 				success: (data) => {
 					console.log(data);
+					this.labDoc.html(markdown.toHTML(data.skeleton));
 				},
 				error: (req, status, err) => {
 					console.log(err);

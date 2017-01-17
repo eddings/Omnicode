@@ -2,6 +2,7 @@ module.exports = function(io, db) {
 	var express = require('express');
 	var cprocess = require('child_process');
 	var stream = require('stream');
+	var fs = require('fs');
 	var router = express.Router();
 	var questions = [];
 
@@ -187,8 +188,14 @@ module.exports = function(io, db) {
 							console.log(Buffer.concat(readerProcess_stdoutData).toString('utf-8').trim());
 							res.status(500).send(Buffer.concat(readerProcess_stderrData));
 						} else {
+							fs.readFile('./lab_skeleton.py', 'utf8', (err, data) => {
+								if (err) {
+									console.log('Skeleton file read error: ' + err);
+									return;
+								}
 
-							res.status(200).send(Buffer.concat(readerProcess_stdoutData));
+								res.status(200).send({tests: Buffer.concat(readerProcess_stdoutData), skeleton: data});
+							});
 						}
 					});
 				}
