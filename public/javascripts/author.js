@@ -247,7 +247,30 @@ class AuthorController {
 				}
 			}
 
-			db.insert(labDB);
+			var request = {
+				labID: LAB_ID,
+				command: SAVE_AND_PUBLISH_COMMAND,
+				doc: labDB
+			};
+
+			$.post({
+				url: AUTHOR_URL,
+				data: JSON.stringify(request),
+				success: (data) => {
+					if (data.ok) {
+						this.editorStatus.text(data.reason);
+						this.editorStatus.css('display', 'inline');
+						setTimeout(() => {
+							this.editorStatus.fadeOut();
+						}, 2000);
+					}
+				},
+				error: (req, status, err) => {
+					console.log(err);
+				},
+				dataType: "json",
+				contentType: 'application/json'
+			});
 		});
 	}
 

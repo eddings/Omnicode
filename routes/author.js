@@ -221,6 +221,15 @@ module.exports = function(io, db) {
 					});
 				});
 			});
+		} else if (command === "saveAndPublish") {
+			//////////////////////////////////////////////
+			// Save and publish command handler for the
+			// newly created lab
+			//////////////////////////////////////////////
+			var labID = body.labID;
+			var doc = body.doc;
+			db.insert(doc);
+			res.status(200).send({ok: true, reason: "The lab is saved and published"});
 		} else {
 			console.log("Unsupported command");
 			res.status(500).send("Unsupported command");

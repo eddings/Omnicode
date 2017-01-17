@@ -6,6 +6,7 @@ const RUN_COMMAND 				= "run";
 const DEBUG_COMMAND				= "debug";
 const SAVE_COMMAND 				= "save";
 const LOAD_COMMAND				= "load";
+const SAVE_AND_PUBLISH_COMMAND	= "saveAndPublish";
 const GET_USER_COMMAND 			= "getUser";
 const ANSWER_COMMAND			= "answer";
 const CODE_EDIT_SAVE_COMMAND	= "codeEditSave";
