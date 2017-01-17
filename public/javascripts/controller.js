@@ -870,6 +870,7 @@ class Lab {
 				success: (data) => {
 					if (data.ok) {
 						this.userData = data.userData;
+						this.editorObj.code = data.userData.code;
 						// TODO: Why creating a new object everytime?
 						//var testParser = new TestParser(this.userData.code);
 						//var parsedObj = testParser.parse();
