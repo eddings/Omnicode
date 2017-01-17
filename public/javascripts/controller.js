@@ -504,8 +504,15 @@ class Lab {
 							checkpointStatus: {},
 							code: '',
 							codeEdits: [],
-							console: {},
-							debugger: {},
+							console: {
+								content: '',
+								history: []
+							},
+							debugger: {
+								debugTraces: [],
+								handlePosition: 0,
+								highlightedStr: ''
+							},
 							notificationPaneContent: {}
 						};
 						$.post({

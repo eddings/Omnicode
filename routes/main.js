@@ -22,7 +22,6 @@ module.exports = function(io, db) {
 				return res.sendStatus(500);
 			} else {
 				if (docs.length !== 1) {
-					console.log(docs.length);
 					docs.forEach((doc, idx) => {
 						console.log(doc);
 					});
