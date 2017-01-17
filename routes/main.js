@@ -24,6 +24,10 @@ module.exports = function(io, db) {
 			} else {
 				if (docs.length !== 1) {
 					console.log('in2');
+					console.log(docs.length);
+					docs.forEach((doc, idx) => {
+						console.log(doc);
+					});
 					return res.status(500).render('error',
 					{
 						title: 'Labyrinth - ' + labID,

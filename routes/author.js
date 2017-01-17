@@ -178,15 +178,12 @@ module.exports = function(io, db) {
 					pickleProcess.stdout.on('end', () => {
 						// JSON trace is generated
 						if (pickleProcess_stderrData.length !== 0) {
-							console.log('in 1');
 							return res.status(500).send(Buffer.concat(pickleProcess_stderrData));
 						} else {
-							console.log('in 2');
 							var doctestsFileName = fileName.split('.')[0] + '_doctests.pickle';
 							var doctestsFilePath = './' + doctestsFileName;
 							// Ignore the stdout data from pickleProcess (mostly uninformative status strings)
 							var readerProcess = cprocess.spawn('python', [readerFilePath, doctestsFilePath]);
-							console.log('in 3');
 
 							readerProcess.stderr.on('data', (chunk) => {
 								readerProcess_stderrData.push(chunk);
@@ -199,20 +196,15 @@ module.exports = function(io, db) {
 							readerProcess.stdout.on('end', () => {
 								// JSON trace is generated
 								if (readerProcess_stderrData.length !== 0) {
-									console.log('in 4');
 									return res.status(500).send(Buffer.concat(readerProcess_stderrData));
 								} else {
-									console.log('in 5');
 									var skeletonFileName = fileName.split('.')[0] + '_skeleton.py';
 									var skeletonFilePath = './' + skeletonFileName;
 									// Read the generated skeleton file
-									console.log('in 6');
 									fs.readFile(skeletonFilePath, 'utf8', (err, data) => {
 										if (err) {
-											console.log('in 7');
 											return console.error('Skeleton file read error: ' + err);
 										}
-										console.log('in 8');
 										return res.status(200).send({docstrings: Buffer.concat(readerProcess_stdoutData).toString('utf-8').trim(), skeleton: data});
 									});
 								}
