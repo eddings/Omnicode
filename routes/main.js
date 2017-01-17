@@ -55,6 +55,9 @@ module.exports = function(io, db) {
 						}
 					});
 
+					console.log('labDoc');
+					console.log(docs[0].labDoc);
+
 				  	return res.status(200).render(
 				  		'main',
 				  		{ 
@@ -219,13 +222,21 @@ module.exports = function(io, db) {
 							var newUser = {
 								userName: userName,
 								password: body.password,
-								role: body.role,
-								checkpointStatus: body.checkpointStatus,
-								code: body.code,
-								codeEdits: body.codeEdits,
-								console: body.console,
-								debugger: body.debugger,
-								notificationPaneContent: body.notificationPaneContent
+								role: 'student',
+								checkpointStatus: {},
+								code: docs[0].labDoc.skeletonCode,
+								// when first signing up, the skeleton code is fetched from the doc
+								codeEdits: [],
+								console: {
+									content: '',
+									history: []
+								},
+								debugger:  {
+									debugTraces: [],
+									handlePosition: 0,
+									highlightedStr: ''
+								},
+								notificationPaneContent: {}
 							};
 							db.update({labID: labID}, {$push: {users: newUser}}, {}, () => {});
 

@@ -499,21 +499,7 @@ class Lab {
 						var userDataObj = {
 							command: SIGNUP_COMMAND,
 							userName: userName,
-							password: pass1,
-							role: 'student',
-							checkpointStatus: {},
-							code: '',
-							codeEdits: [],
-							console: {
-								content: '',
-								history: []
-							},
-							debugger: {
-								debugTraces: [],
-								handlePosition: 0,
-								highlightedStr: ''
-							},
-							notificationPaneContent: {}
+							password: pass1
 						};
 						$.post({
 							url: LAB_URL + "/" + LAB_ID,
