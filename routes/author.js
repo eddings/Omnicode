@@ -3,6 +3,7 @@ module.exports = function(io, db) {
 	var cprocess = require('child_process');
 	var stream = require('stream');
 	var fs = require('fs');
+	var mkdirp = require('mkdirp');
 	var router = express.Router();
 	var questions = [];
 
@@ -48,11 +49,9 @@ module.exports = function(io, db) {
 					  			user: docs[0].users[findUser(docs[0].users, userName)]
 							}
 						);
-						return;
 					} else {
 						console.log('You do not have permission to author this lab');
 						res.status(500).send('You do not have permission to author this lab');
-						return;
 					}
 				}
 			);
@@ -63,7 +62,6 @@ module.exports = function(io, db) {
 				title: 'Labyrinth - ' + labID,
 				errorMsg: "Something went wrong ... Please check the lab ID and the URL"
 			});
-			return;
 		}
 	});
 
@@ -79,24 +77,20 @@ module.exports = function(io, db) {
 			var labID = body.labID;
 			if (!labID) {
 				console.log('Lab ID not given');
-				res.status(500).send("Lab ID not given");
-				return;
+				return res.status(500).send("Lab ID not given");
 			}
 
 			db.find({labID: labID}, (err, docs) => {
 				if (err) {
 					console.log(err);
-					res.status(500).send("DB find operation error. Lab ID to look for: " + labID);
-					return;
+					return res.status(500).send("DB find operation error. Lab ID to look for: " + labID);
 				}
 
 				if (docs.length > 0) {
-					res.status(200).send({ok: false, reason: "Lab ID already exists"});
-					return;
+					return res.status(200).send({ok: false, reason: "Lab ID already exists"});
 				}
 
 				res.status(200).send({ok: true});
-				return;
 			});
 		} else if (command === "signup") {
 			//////////////////////////////////////////////
@@ -107,13 +101,11 @@ module.exports = function(io, db) {
 			db.find({ labID: labID }, (err, docs) => {
 				if (err) {
 					console.log(err);
-					res.status(500).send("DB find operation error. Lab ID to look for: " + labID);
-					return;
+					return res.status(500).send("DB find operation error. Lab ID to look for: " + labID);
 				}
 
 				if (docs.length > 0) {
-					res.status(200).send({ok: false, reason: "Lab ID already exists"});
-					return;
+					return res.status(200).send({ok: false, reason: "Lab ID already exists"});
 				}
 
 			    var newLabDoc = {
@@ -136,77 +128,103 @@ module.exports = function(io, db) {
 			        timelineQuestions: []
 			    };
 				db.insert(newLabDoc);
-				res.status(200).send({ok: true});
-				return;
+				return res.status(200).send({ok: true});
 			});
-		} else if (command === "view") {
+		} else if (command === "load") {
 			//////////////////////////////////////////////
-			// View command handler for the new lab.
+			// Load command handler for the new lab.
 			// The author wants to see how the code parses
 			// down to markdown and test cases.
 			//////////////////////////////////////////////
-			var code = body.code;
+			var labID = body.labID;
+			var fileName = body.fileName;
+			var fileContent = body.fileContent;
 			var lang = body.language;
 
-			// execute the code
-			var pickleProcess = cprocess.spawn('python', ['./public/python/PythonTutor/doctest_splitter.py', './public/python/PythonTutor/lab.py']);
-			
-			var pickleProcess_stderrData = [];
-			var pickleProcess_stdoutData = [];
+			if (lang !== 'python') {
+				return console.error("Not supported language");
+			}
 
-			var readerProcess_stderrData = [];
-			var readerProcess_stdoutData = [];
+			var dirPath = './labs/' + labID;
+			var filePath = dirPath + '/' + fileName;
 
-			pickleProcess.stderr.on('data', (chunk) => {
-				pickleProcess_stderrData.push(chunk);
-			});
+			mkdirp(dirPath, (err) => {
+				// Create the lab directory
+				if (err) return console.error(err);
 
-			pickleProcess.stdout.on('data', (chunk) => {
-				pickleProcess_stdoutData.push(chunk);
-			});
+				fs.writeFile(filePath, fileContent, (err) => {
+					// Create the lab file
+					if (err) return console.error(err);
 
-			pickleProcess.stdout.on('end', () => {
-				// JSON trace is generated
-				if (pickleProcess_stderrData.length !== 0) {
-					res.status(500).send(Buffer.concat(pickleProcess_stderrData));
-				} else {
-					// Ignore the stdout data from pickleProcess (mostly uninformative status strings)
-					var readerProcess = cprocess.spawn('python', ['./public/python/PythonTutor/doctest_reader.py', './lab_doctests.pickle']);
+					var splitterFilePath = './public/python/PythonTutor/doctest_splitter.py';
+					var readerFilePath = './public/python/PythonTutor/doctest_reader.py';
+					// execute the code
+					var pickleProcess = cprocess.spawn(lang, [splitterFilePath, filePath]);
+					
+					var pickleProcess_stderrData = [];
+					var pickleProcess_stdoutData = [];
 
-					readerProcess.stderr.on('data', (chunk) => {
-						readerProcess_stderrData.push(chunk);
+					var readerProcess_stderrData = [];
+					var readerProcess_stdoutData = [];
+
+					pickleProcess.stderr.on('data', (chunk) => {
+						pickleProcess_stderrData.push(chunk);
 					});
 
-					readerProcess.stdout.on('data', (chunk) => {
-						readerProcess_stdoutData.push(chunk);
+					pickleProcess.stdout.on('data', (chunk) => {
+						pickleProcess_stdoutData.push(chunk);
 					});
 
-					readerProcess.stdout.on('end', () => {
+					pickleProcess.stdout.on('end', () => {
 						// JSON trace is generated
-						if (readerProcess_stderrData.length !== 0) {
-							console.log(Buffer.concat(readerProcess_stderrData).toString('utf-8').trim());
-							console.log(Buffer.concat(readerProcess_stdoutData).toString('utf-8').trim());
-							res.status(500).send(Buffer.concat(readerProcess_stderrData));
+						if (pickleProcess_stderrData.length !== 0) {
+							console.log('in 1');
+							return res.status(500).send(Buffer.concat(pickleProcess_stderrData));
 						} else {
-							fs.readFile('./lab_skeleton.py', 'utf8', (err, data) => {
-								if (err) {
-									console.log('Skeleton file read error: ' + err);
-									return;
-								}
+							console.log('in 2');
+							var doctestsFileName = fileName.split('.')[0] + '_doctests.pickle';
+							var doctestsFilePath = './' + doctestsFileName;
+							// Ignore the stdout data from pickleProcess (mostly uninformative status strings)
+							var readerProcess = cprocess.spawn('python', [readerFilePath, doctestsFilePath]);
+							console.log('in 3');
 
-								res.status(200).send({tests: Buffer.concat(readerProcess_stdoutData), skeleton: data});
+							readerProcess.stderr.on('data', (chunk) => {
+								readerProcess_stderrData.push(chunk);
+							});
+
+							readerProcess.stdout.on('data', (chunk) => {
+								readerProcess_stdoutData.push(chunk);
+							});
+
+							readerProcess.stdout.on('end', () => {
+								// JSON trace is generated
+								if (readerProcess_stderrData.length !== 0) {
+									console.log('in 4');
+									return res.status(500).send(Buffer.concat(readerProcess_stderrData));
+								} else {
+									console.log('in 5');
+									var skeletonFileName = fileName.split('.')[0] + '_skeleton.py';
+									var skeletonFilePath = './' + skeletonFileName;
+									// Read the generated skeleton file
+									console.log('in 6');
+									fs.readFile(skeletonFilePath, 'utf8', (err, data) => {
+										if (err) {
+											console.log('in 7');
+											return console.error('Skeleton file read error: ' + err);
+										}
+										console.log('in 8');
+										return res.status(200).send({docstrings: Buffer.concat(readerProcess_stdoutData).toString('utf-8').trim(), skeleton: data});
+									});
+								}
 							});
 						}
 					});
-				}
+				});
 			});
-			return;
 		} else {
 			console.log("Unsupported command");
 			res.status(500).send("Unsupported command");
-			return;
 		}
-
 	});
 
 	return router;

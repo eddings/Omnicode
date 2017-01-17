@@ -22,7 +22,7 @@ class AuthorController {
 		this.editorStatus = $('#editor-status');
 
 		// Editor control related
-		this.viewBtn = $('#viewBtn');
+		this.loadFileInput = $('#loadFileInput');
 
 		// Console related
 		this.console = $('#console');
@@ -50,8 +50,8 @@ class AuthorController {
 		this.addModalHandlers();
 		this.addBtnHandlers();
 		this.initEditor();
-		this.initConsole();
-		this.initDebugger();
+		//this.initConsole();
+		//this.initDebugger();
 	}
 
 	get code() {
@@ -137,23 +137,64 @@ class AuthorController {
 	}
 
 	addBtnHandlers() {
-		this.addViewBtnHandler();
+		this.addLoadBtnHandler();
 	}
 
-	addViewBtnHandler() {
-		this.viewBtn.on('click', (e) => {
+	addLoadBtnHandler() {
+		function createTestcaseHTML(testcases, ckptNum) {
+			if (!testcases || testcases.length === 0) {
+				return;
+			}
+
+			var tableHTML =
+			'<table>' +
+				'<tr>' +
+					'<th>#</th>' +
+					'<th>Testcase</th>' +
+					'<th>Expected</th>' +
+					'<th>Status</th>' +
+				'</tr>';
+			testcases.forEach((ex, idx) => {
+				tableHTML +=
+				'<tr>' +
+					'<td>' + idx + '</td>' +
+					'<td>' + ex.source + '</td>' +
+					'<td>' + ex.want + '</td>' +
+					'<td><img id="case' + ckptNum + idx + '" src="../images/minus.png"/></td>' +
+				'</tr>';
+			});
+
+			tableHTML +=
+			'</table>'
+
+			return tableHTML;
+		}
+
+		function sendViewRequest(fileName, fileContent) {
 			var request = {
-				command: VIEW_COMMAND,
-				code: this.code,
-				lanugage: LAB_LANG
+				labID: LAB_ID,
+				command: LOAD_COMMAND,
+				fileName: fileName,
+				fileContent: fileContent,
+				language: LAB_LANG
 			};
 
 			$.post({
 				url: AUTHOR_URL,
 				data: JSON.stringify(request),
 				success: (data) => {
-					console.log(data);
-					this.labDoc.html(markdown.toHTML(data.skeleton));
+					var docstrings = JSON.parse(data.docstrings);
+					if (docstrings.length > 0) {
+						var labdoc = docstrings[0];
+						var checkpoints = docstrings.slice(1);
+
+						this.labDoc.append(markdown.toHTML(labdoc.docstring));
+						checkpoints.forEach((cp, idx) => {
+							this.labDoc.append(markdown.toHTML(cp.docstring.split('------')[0]));
+							this.labDoc.append(createTestcaseHTML(cp.examples, idx));
+						});
+					}
+					this.code = data.skeleton;
 				},
 				error: (req, status, err) => {
 					console.log(err);
@@ -161,6 +202,22 @@ class AuthorController {
 				dataType: "json",
 				contentType: 'application/json'
 			});
+		}
+
+		this.loadFileInput.on('change', (e) => {
+			if (!e.target.files || !e.target.files[0]) {
+				alert("Please select a file");
+				return;
+			}
+
+			var file = e.target.files[0];
+			var fr = new FileReader();
+			fr.onload = (e) => {
+				var fileContent = e.target.result;
+				sendViewRequest(file.name, fileContent);
+			};
+
+			fr.readAsText(file);
 		});
 	}
 

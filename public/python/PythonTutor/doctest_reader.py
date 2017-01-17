@@ -8,7 +8,7 @@ Output:
 - a JSON blob representing its contents, printed to stdout
 '''
 
-import cPickle
+import pickle
 import sys
 import json
 import traceback
@@ -34,7 +34,7 @@ if __name__ == "__main__":
         fullpath = sys.argv[1]
         assert fullpath.endswith(".pickle")
         with open(fullpath, 'rb') as f:
-            tests = cPickle.load(f)
+            tests = pickle.load(f)
             all_encoded_tests = [encode_doctest(t) for t in tests]
             print(json.dumps(all_encoded_tests, indent=2))
     except:

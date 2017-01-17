@@ -1,16 +1,3 @@
-# some examples adapted from https://docs.python.org/2/library/doctest.html
-
-LAB_NAME = "First doctest lab"
-
-LAB_DESCRIPTION = '''
-This is my first **lab** in [markdown](https://daringfireball.net/projects/markdown/syntax) format
-
-- shawn
-- is
-- cool
-
-woohoo!
-'''
 
 
 def factorial(n):
@@ -43,12 +30,12 @@ def slow_multiply(a, b):
     return prod
 
 
-GLOBAL_DATA = [{'name': 'John', 'age': 21},
-               {'name': 'Jane', 'age': 35},
-               {'name': 'Carol', 'age': 18}]
+GLOBAL_DATA = [{"name": "John",  "age": 21},
+               {"name": "Jane",  "age": 35},
+               {"name": "Carol", "age": 18}]
 
 def find_age(person):
     for e in GLOBAL_DATA:
-        if e['name'] == person:
-            return e['age']
+        if e["name"] == person:
+            return e["age"]
     raise KeyError # not found!
