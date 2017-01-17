@@ -237,14 +237,9 @@ class AuthorController {
 		this.saveBtn.on('click', (e) => {
 			// Save the lab material and maybe announce (send a notification) to students
 			var lab = {
-				labID: LAB_ID,
-				labDoc: {
-					labDesc: this.labDesc,
-					skeletonCode: this.skeletonCode,
-					checkpoints: this.checkpoints,
-				},
-				users: [],
-				timelineQuestions: []
+				labDesc: this.labDesc,
+				skeletonCode: this.skeletonCode,
+				checkpoints: this.checkpoints,
 			}
 
 			var request = {
