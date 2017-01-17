@@ -15,29 +15,48 @@ module.exports = function(io, db) {
 	// /lab/intro_programming?user=test&password=test
 	router.get('/:labID', (req, res, next) => {
 		var labID = req.params.labID;
-		var userName = req.query.user;
-		var password = req.query.password; 
 
 		db.find({labID: labID}, (err, docs) => {
 			if (err) {
-				console.log(err);
-				res.sendStatus(500);
-				return;
+				console.log('in1');
+				console.error(err);
+				return res.sendStatus(500);
 			} else {
 				if (docs.length !== 1) {
-					res.status(500).render('error',
+					console.log('in2');
+					return res.status(500).render('error',
 					{
 						title: 'Labyrinth - ' + labID,
 						errorMsg: "Something went wrong ... Please check the lab ID and the URL"
 					});
 				} else {
+					var userName = req.query.user;
+					var password = req.query.password;
+
+					if (!userName || password) {
+						console.log('in3');
+					  	return res.status(200).render(
+					  		'main',
+					  		{ 
+					  			title: 'Labyrinth - ' + labID,
+					  			labID: labID,
+					  			language: 'python',
+					  			labDoc: docs[0].labDoc,
+					  			loggedIn: false,
+					  			user: docs[0].users[findUser(docs[0].users, userName)]
+					  		}
+					  	);
+					}
+					console.log('in4');
+
 					var loggedIn = false;
 					docs[0].users.forEach((user, idx) => {
 						if (user.userName === userName) {
 							loggedIn = user.password === password;
 						}
 					});
-				  	res.status(200).render(
+
+				  	return res.status(200).render(
 				  		'main',
 				  		{ 
 				  			title: 'Labyrinth - ' + labID,
@@ -260,7 +279,7 @@ module.exports = function(io, db) {
 					res.status(500).send('DB find operation error');
 					return;
 				}
-				
+
 				if (docs.length !== 1) {
 					console.log("Error, lab doc is not uniquified by labID");
 					res.status(500).render('error',
