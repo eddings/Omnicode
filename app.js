@@ -118,6 +118,7 @@ fs.readFile('skeleton.py', 'utf8', (err, data) => {
                 role: "student",
                 checkpointStatus: {},
                 code: skeletonCode,
+                codeAST: '',
                 codeEdits: [],
                 console: {
                     content: '',
@@ -136,6 +137,7 @@ fs.readFile('skeleton.py', 'utf8', (err, data) => {
                 role: "student",
                 checkpointStatus: {},
                 code: skeletonCode,
+                codeAST: '',
                 codeEdits: [],
                 console: {
                     content: '',
