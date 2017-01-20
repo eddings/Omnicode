@@ -64,217 +64,6 @@ class Checkpoint {
 	}
 }
 
-class RightClickController {
-	constructor(editorObj) {
-		this.editor = editorObj.editor;
-
-		this.contextMenu = null;
-		this.contextMenuPos = null;
-		this.windowWidth = -1;
-		this.windowHeight = -1;
-		this.clickCoords = null;
-		this.clickCoordsX = -1;
-		this.clickCoordsY = -1;
-
-		this.isContextMenuVisible = false;
-		this.activeClassName = "context-menu--active";
-		this.debugMenuID = "menu-debug";
-		this.viewHintMenuID = "menu-view-a-hint";
-		this.askQuestionMenuID = "menu-ask-a-question";
-
-		this.questionModal = []; // Question Modal; should not be an array
-
-		this.init();
-	}
-
-	init() {
-		this.collectContextMenu();
-		this.collectQuestionModal();
-		this.addContextListener();
-		this.addKeyUpListner();
-		this.addQusetionModalHandler();
-	}
-
-	collectContextMenu() {
-		this.contextMenu = $("#context-menu");
-	}
-
-	/* TODO: Duplicate. Also, there will be only 1 question modal -- the content of it
-	 *       will be dynamically populated, instead of rolling a separate question modal for each
-	 *       ckpt.
-	 */
-	collectQuestionModal() {
-		// TODO: Check if i matches with the index included in the identifier of el
-		$("div[id^='question-modal']").each((i, el) => {
-			this.questionModal.push(
-			{
-				questionID: i,
-				questionModal: $(el),
-				questionModalCheckpoint: $('#question-modal-checkpoint' + i),
-				questionModalTestCases: $('#question-modal-testcases' + i),
-				questionModalCode: $('#question-modal-code' + i),
-				questionModalText: $('#question-modal-text' + i),
-				questionModalSubmitBtn: $('#question-modal-submit-btn' + i),
-				questionModalCloseBtn: $('#question-modal-close' + i)
-			});
-		});     
-	}
-
-	addContextListener() {
-		/* IE >= 9 */
-		document.addEventListener("contextmenu", (e) => {
-			e.preventDefault();
-			this.toggleMenuOn();
-			this.positionMenu(e);
-		});
-
-		document.addEventListener("click", (e) => {
-			var button = e.which || e.button;
-			if (button === 1) {
-				this.toggleMenuOff();
-				if (e.target.id === this.askQuestionMenuID) {
-					var textBlock = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
-					$('#question-modal-code0').text(textBlock);
-					this.questionModal[0].questionModal.css('display', 'block');
-				} else if (e.target.id === this.viewHintMenuID) {
-					// TODO: implement me...
-				} else if (e.target.id === this.debugMenuID) {
-					this.debugStr = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
-					// TODO: this is not separated... having a separate class like this doesn't make
-					//       sense b/c this class would need access to other elements in the DOM.
-					// 		 Also, how would you make it so that the text selection is maintained (and
-					//		 highlighted) across different tabs in the execution slider?
-					$('#debugger-view-div').highlight(this.debugStr); // TODO: remove this separate id tag
-				}
-			} else {
-				this.toggleMenuOff();
-				// TODO: Turn off the highlight as well?
-			}
-			return true;
-		});
-	}
-
-	addKeyUpListner() {
-		/* Remove the context menu on pressing the ESC key */
-		window.onkeyup = (e) => {
-			if (e.keyCode === 27) {
-				this.toggleMenuOff();
-			}
-		};
-	}
-
-	toggleMenuOn() {
-		if (!this.isContextMenuVisible) {
-			this.isContextMenuVisible = true;
-			this.contextMenu.addClass(this.activeClassName);
-		}
-	}
-
-	toggleMenuOff() {
-		if (this.isContextMenuVisible) {
-			this.isContextMenuVisible = false;
-			this.contextMenu.removeClass(this.activeClassName);
-		}
-	}
-
-	getPosition(e) {
-		var posx = 0;
-		var posy = 0;
-
-		if (!e) { var e = window.event; }
-
-		if (e.pageX || e.pageY) {
-			posx = e.pageX;
-			posy = e.pageY;
-		} else if (e.clientX || e.clientY) {
-			posx = e.clientX + document.body.scrollLeft + 
-					document.documentElement.scrollLeft;
-			posy = e.clientY + document.body.scrollTop + 
-					document.documentElement.scrollTop;
-		}
-		return {
-			x: posx,
-			y: posy
-		}
-	}
-
-	positionMenu(e) {
-		this.clickCoords = this.getPosition(e);
-		this.clickCoordsX = this.clickCoords.x;
-		this.clickCoordsY = this.clickCoords.y;
-
-		this.contextMenuWidth = this.contextMenu.width() + 4;
-		this.contextMenuHeight = this.contextMenu.height() + 4;
-
-		this.windowWidth = window.innerWidth;
-		this.windowHeight = window.innerHeight;
-
-		var styleStr = '';
-
-		if ((this.windowWidth - this.clickCoordsX) < this.contextMenuWidth) {
-			styleStr += "left: " + (this.windowWidth - this.contextMenuWidth) + "px;";
-		} else {
-			styleStr += "left: " + this.clickCoordsX + "px;";
-		}
-
-		if ((this.windowHeight - this.clickCoordsY) < this.contextMenuHeight) {
-			styleStr += "top: " + (this.windowHeight - this.contextMenuHeight) + "px;";
-		} else {
-			styleStr += "top: " + this.clickCoordsY + "px;";
-		}
-
-		this.contextMenu.attr("style", styleStr);
-	}
-
-	/* TODO: Dup. */
-	addQusetionModalHandler() {
-		this.questionModal.forEach((obj, idx) => {
-			obj.questionModalSubmitBtn.on("click", (e) => {
-				// Assumes that the user selected an appropriate block of code
-				var textBlock = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
-				obj.questionModalCode.text(textBlock);
-				var question = obj.questionModalText.val();
-				var checkpointID = obj.questionID;
-				var testCases = obj.questionModalTestCases.html();
-				var data = {
-					command: QUESTION_COMMAND,
-					question: question, // TODO: modify this
-					checkpointID: checkpointID, // TODO: check if the IDs actually match
-					testCases: testCases, // TODO: modify the format
-					userName: USER_NAME, // should've been already logged in and the userName is set
-					language: LAB_LANG,
-					code: textBlock
-				};
-				var URL = QUESTION_URL + "/" + LAB_ID;
-				//-- preferrably we will show a pop up to fill out the rest of the question details
-
-				$.post(
-				{
-					url: URL,
-					data: JSON.stringify(data),
-					success: (data, status) => {
-						// Send the message to a subset of people based on the result of AST analysis
-						QUESTION_SOCKET.emit('question', data); // Transfer the question in 'data'
-						obj.questionModal.css('display', 'none');
-					},
-					error: (req, status, err) => {
-						console.log(err);
-					},
-					dataType: "json",
-					contentType: "application/json"
-				});
-			});
-
-			obj.questionModalCloseBtn.on("click", (e) => {
-				obj.questionModal.css('display', 'none');
-			});
-		});
-	}
-
-	sendQuestionRequest(textBlock) {
-	}
-}
-
 class EditorObj {
 	constructor() {
 		this.editor = ace.edit("editor"); // takes time
@@ -282,6 +71,7 @@ class EditorObj {
 		this.editor.getSession().setMode("ace/mode/python");
 		this.editor.setShowPrintMargin(false); // vertical line at char 80
 		this.editor.$blockScrolling = Infinity; // remove scrolling warnings
+		//this.editor.setHighlightGutterLine(false);
 	}
 
 	get code() {
@@ -294,10 +84,9 @@ class EditorObj {
 }
 
 class Lab {
-	constructor(checkpoints = []) {
-		this.checkpoints = checkpoints; // Array of checkpoints
+	constructor() {
+		this.checkpoints = []; // Array of checkpoints
 		this.questionBtns = []; // Question Buttons
-		this.questionModals = []; // Question Modal
 
 		// Test Case Spans
 		this.testCaseSpans = [];
@@ -316,6 +105,12 @@ class Lab {
 		this.answerNotificationModalContent = $('#answer-notification-modal-content');
 		this.answerNotificationModalText = $('#answer-notification-modal-text');
 
+		// System warning modal
+		this.warningNotificationModal = $('#warning-notification-modal');
+		this.warningNotificationModalClose = $('#warning-notification-modal-close');
+		this.warningNotificationModalContent = $('#warning-notification-modal-content');
+		this.warningNotificationModalText = $('#warning-notification-modal-text');
+
 		// Login and signup modals
 		this.loginModal = $('#login-modal');
 		this.loginModalLoginInput = $('#user-name-login-input');
@@ -333,12 +128,13 @@ class Lab {
 		this.loginLink = $('#login-link');
 
 		// Code Editor Control Buttons
-		this.runBtn = $('#runBtn');
+		this.runAllTestsBtn = $('#runAllTestsBtn');
 		this.saveBtn = $('#saveBtn');
 		this.debugBtn = $('#debugBtn');
 
 		// Editor-related
 		this.editorObj = new EditorObj();
+		this.editor = this.editorObj.editor;
 		this.editorStatus = $('#editor-status');
 
 		// Console
@@ -356,6 +152,29 @@ class Lab {
 		// Logged-in user data
 		this.userData = {};
 
+		// Run results
+		this.runResults = [];
+		this.runningCode = '';
+		this.syntaxErrorRanges = null;
+		this.prevSyntaxErrorRanges = [];
+
+		// Context menu
+		this.contextMenu = null;
+		this.contextMenuPos = null;
+		this.windowWidth = -1;
+		this.windowHeight = -1;
+		this.clickCoords = null;
+		this.clickCoordsX = -1;
+		this.clickCoordsY = -1;
+
+		this.isContextMenuVisible = false;
+		this.activeClassName = "context-menu--active";
+		this.debugMenuID = "menu-debug";
+		this.viewHintMenuID = "menu-view-a-hint";
+		this.askQuestionMenuID = "menu-ask-a-question";
+
+		this.questionModal = null; // Question Modal
+
 		this.init();
 	}
 
@@ -365,28 +184,11 @@ class Lab {
 		});
 	}
 
-	collectQuestionModals() {
-		// TODO: Check if i matches with the index included in the identifier of el
-		$("div[id^='question-modal']").each((i, el) => {
-			this.questionModals.push(
-			{
-				questionID: i,
-				questionModal: $(el),
-				questionModalCheckpoint: $('#question-modal-checkpoint' + i),
-				questionModalTestCases: $('#question-modal-testcases' + i),
-				questionModalText: $('#question-modal-text' + i),
-				questionModalSubmitBtn: $('#question-modal-submit-btn' + i),
-				questionModalCloseBtn: $('#question-modal-close' + i)
-			});
-		});     
-	}
-
 	collectTestCaseSpans() {
 	}
 
 	init() {
 		this.collectQuestionBtns();
-		this.collectQuestionModals();
 		this.collectTestCaseSpans();
 
 		this.addModalHandlers();
@@ -395,11 +197,18 @@ class Lab {
 		this.addQuestionNotificationHandler();
 		this.addAnswerNotificationHandler();
 
+		// Context menu handler
+		this.collectContextMenu();
+		this.collectQuestionModal();
+		this.addContextListener();
+		this.addKeyUpListner();
+		this.addQusetionModalHandler();
+
 		this.initConsole();
 		this.initDebugger();
 
 		// Initialize the user status
-		this.initUserStatus();
+		this.initStatus();
 	}
 
 	addQuestionNotificationHandler() {
@@ -424,9 +233,13 @@ class Lab {
 		});
 	}
 
-	qusetionModalHandler() {
-		this.questionModals.forEach((obj, idx) => {
-		});
+	postWarningNotificationModal(data) {
+		this.warningNotificationModal.css('display', 'inline');
+		var content = data.msg;
+		this.warningNotificationModalText.html('<p>' + content + '</p>');        
+		setTimeout(() => {
+			this.warningNotificationModal.fadeOut();
+		}, 6000);
 	}
 
 	notificationModalHandler() {
@@ -445,6 +258,10 @@ class Lab {
 
 		this.answerNotificationModalClose.on("click", (e) => {
 			this.answerNotificationModal.css('display', 'none');
+		});
+
+		this.warningNotificationModalClose.on("click", (e) => {
+			this.warningNotificationModal.css('display', 'none');
 		});
 	}
 
@@ -549,27 +366,38 @@ class Lab {
 		});
 	}
 
-	addQuestionBtnHandler() {
-		this.questionBtns.forEach((btn, idx) => {
-			btn.on("click", (e) => {
-				this.questionModals[idx].questionModal.css('display', 'block');
-			});
-		});
-	}
-
 	addModalBackgroundClickHandler() {
 		/* Dismiss the question modal when the background is clicked */
-		this.questionModals.forEach((obj, idx) => {
-			window.onclick = (e) => {
-				if (e.target.id === obj.questionModal.attr('id')) {
-					obj.questionModal.css('display', 'none');
-				}
-			};  
-		}); 
+		// TODO: TEST
+		window.onclick = (e) => {
+			var qModal = this.questionModal;
+			if (e.target.id === qModal.questionModal.attr('id')) {
+				qModal.questionModal.css('display', 'none');
+			}
+		};
 	}
 
-	addRunBtnHandler() {
-		this.runBtn.on('click', (e) => {
+	highlightSyntaxErrors(errorRanges) {
+		////////////////////////////////////
+		// Highlight all the syntax errors
+		////////////////////////////////////
+		var errorIndicationStyle = 'redGutter';
+		this.prevSyntaxErrorRanges.forEach((range, idx) => {
+			this.editor.session.removeGutterDecoration(range.start.row-1, errorIndicationStyle);
+		});
+
+		this.syntaxErrorRanges.forEach((range, idx) => {
+			this.editor.session.addGutterDecoration(range.start.row-1, errorIndicationStyle);
+		});
+
+		this.prevSyntaxErrorRanges = this.syntaxErrorRanges;
+	}
+
+	addRunAllTestsBtnHandler() {
+		////////////////////////////
+		// Run all the test cases
+		////////////////////////////
+		this.runAllTestsBtn.on('click', (e) => {
 			// Show the console
 			this.console.attr("style", "display: block;");
 			this.consoleClear.attr("style", "display: block;");
@@ -580,24 +408,49 @@ class Lab {
 			// arrow function lets 'this' to be looked up in the lexical scope
 			var URL = LAB_URL + '/' + LAB_ID;
 			var dataObj = {
-				command: RUN_COMMAND,
+				command: RUN_ALL_TESTS_COMMAND,
 				code: this.editorObj.code,
 				language: LAB_LANG
 			};
+
+			this.editorStatus.html("Runnig tests ... ");
+			this.editorStatus.css('display', 'inline');
 			$.post({
 				url: URL,
 				data: JSON.stringify(dataObj),
 				success: (data) => {
-					var output = this.checkpoints[0].testCases[0].output;
-					var res = data.toString('utf-8').trim();
-					if (output === res) {
-						$('#state-img-checkpoint0').attr('src', '../images/success.png');
-						$('#state-img-checkpoint0-testcase0').attr('src', '../images/success.png');
-					} else {
-						$('#state-img-checkpoint0').attr('src', '../images/error.png');
-						$('#state-img-checkpoint0-testcase0').attr('src', '../images/error.png');
-					}
-					this.consoleObj.Write(res + '\n', 'jqconsole-output');
+					this.editorStatus.html("Done");
+					setTimeout(() => {
+						this.editorStatus.fadeOut();
+					}, 2000);
+
+					var json = JSON.parse(data);
+					this.runningCode = json.runningCode;
+					this.syntaxErrorRanges = json.syntaxErrorRanges;
+					this.runResults = json.results;
+
+					// Set gutter highlight to indicate syntax error
+					console.log(this.runningCode);
+					this.highlightSyntaxErrors(this.syntaxErrorRanges);
+
+					this.checkpoints.forEach((cp, cp_idx) => {
+						cp.testCases.forEach((testcase, testcase_idx) => {
+							var traceLen = this.runResults[cp_idx][testcase_idx][0].length;
+							var result = '';
+							if (this.runResults[cp_idx][testcase_idx][0][traceLen-1]["event"] === "return") {
+								result = this.runResults[cp_idx][testcase_idx][0][traceLen-1]["stdout"]["__main__"];
+							} else if (this.runResults[cp_idx][testcase_idx][0][traceLen-1]["event"] === "exception") {
+								result = this.runResults[cp_idx][testcase_idx][0][traceLen-1]["exception_msg"];
+							}
+							var testcaseResImg = $('#case' + cp_idx + '_' + testcase_idx);
+							if (testcase.want === result) {
+								testcaseResImg.attr('src', '../images/success.png');
+							} else {
+								testcaseResImg.attr('src', '../images/error.png');
+							}
+						});
+					});
+					//this.consoleObj.Write(res + '\n', 'jqconsole-output');
 				},
 				error: (req, status, err) => {
 					console.log(err);
@@ -766,15 +619,13 @@ class Lab {
 	}
 
 	addBtnHandlers() {
-		this.addRunBtnHandler();
+		this.addRunAllTestsBtnHandler();
 		this.addDebugBtnHandler();
 		this.addSaveBtnHandler();
 	}
 
 	addModalHandlers() {
 		this.addModalBackgroundClickHandler();
-		this.addQuestionBtnHandler();
-		this.qusetionModalHandler();
 		this.notificationModalHandler();
 		this.loginModalHandler();
 		this.signupLinkClickHandler();
@@ -857,11 +708,11 @@ class Lab {
 		);
 	}
 
-	initUserStatus() {
+	initStatus() {
 		if (USER_NAME) {
 			var URL = LAB_URL + '/' + LAB_ID;
 			var dataObj = {
-				command: GET_USER_COMMAND,
+				command: GET_STATUS_COMMAND,
 				userName: USER_NAME
 			};
 			$.post({
@@ -869,6 +720,7 @@ class Lab {
 				data: JSON.stringify(dataObj),
 				success: (data) => {
 					if (data.ok) {
+						this.checkpoints = data.checkpoints;
 						this.userData = data.userData;
 						this.editorObj.code = data.userData.code;
 						// TODO: Why creating a new object everytime?
@@ -878,6 +730,9 @@ class Lab {
 						
 						this.consoleObj.Write(this.userData.console.content, 'jqconsole-output');
 						this.consoleObj.SetHistory(this.userData.console.history);
+
+						// Add interaction (click) handlers
+						this.addDoubleClickHandler();
 					}
 				},
 				error: (req, status, err) => {
@@ -887,25 +742,329 @@ class Lab {
 			});
 		}
 	}
+
+	addDoubleClickHandler() {
+		function findFooLineNumber(editor, foo) {
+			return editor.find(foo, {
+				wrap: true,
+				caseSensitive: true,
+				wholeWord: true,
+				preventScroll: true // do not change selection
+			});
+		}
+
+		function moveEditorCursor(editor, range) {
+			var row = range.start.row;
+			//editor.addSelectionMarker(range);
+			editor.resize(true);
+			editor.scrollToLine(row+1, true, true, () => {});
+			editor.gotoLine(row+1, 0, true);
+		}
+
+		$('#labdoc-html-div').on('dblclick', (e) => {
+			moveEditorCursor(this.editorObj.editor, {start: {row: 0, column: 0}, end: {row: 0, column: 0}});
+		});
+
+		$('div[id^="checkpoint-html-div"]').each((idx, el) => {
+			$(el).on('dblclick', (e) => {
+				var checkpointName = this.checkpoints[idx].name.split('.')[1];
+				var searchStr = 'def ' + checkpointName;
+				var range = findFooLineNumber(this.editorObj.editor, searchStr);
+
+				if (!range) {
+					return this.postWarningNotificationModal(
+						{msg:
+							'Function ' +
+							'<i>' + checkpointName + '</i>' +
+							' does not seem to exist.' +
+							'<br>' +
+							'Why don\'t you create one?' +
+							'<br>' +
+							'<b>' + 'def ' + checkpointName + '(...)' + '</b>'
+						});
+				}
+
+				moveEditorCursor(this.editorObj.editor, range);
+			});
+		});
+
+		$('div[id^="testcase-html-div"]').each((idx, el) => {
+			$(el).on('dblclick', (e) => {
+				var nums = el.id.split('testcase-html-div')[1].split('_');
+				var checkpointNum = nums[0];
+				var testcaseNum = nums[1]
+				var searchStr = 'def ' + this.checkpoints[checkpointNum].name.split('.')[1];
+				var range = findFooLineNumber(this.editorObj.editor, searchStr);
+				moveEditorCursor(this.editorObj.editor, range);
+			});
+		});
+	}
+
+	//////////////////////////////
+	// Context Menu Related
+	//////////////////////////////
+	collectContextMenu() {
+		this.contextMenu = $("#context-menu");
+	}
+
+	collectQuestionModal() {
+		// TODO: Check if i matches with the index included in the identifier of el
+		this.questionModal = 
+		{
+			questionID: 0, // TODO: FIX THIS TO A REAL CHECKPOINT NUMBER
+			questionModal: $('#question-modal'),
+			questionModalCheckpoint: $('#question-modal-checkpoint'),
+			questionModalTestCases: $('#question-modal-testcases'),
+			questionModalCode: $('#question-modal-code'),
+			questionModalText: $('#question-modal-text'),
+			questionModalSubmitBtn: $('#question-modal-submit-btn'),
+			questionModalCloseBtn: $('#question-modal-close')
+		};
+	}
+
+	addContextListener() {
+		/* IE >= 9 */
+		document.addEventListener("contextmenu", (e) => {
+			e.preventDefault();
+			this.toggleMenuOn();
+			this.positionMenu(e);
+		});
+
+		document.addEventListener("click", (e) => {
+			var button = e.which || e.button;
+			if (button === 1) {
+				this.toggleMenuOff();
+				if (e.target.id === this.askQuestionMenuID) {
+					var textBlock = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
+					$('#question-modal-code').text(textBlock);
+					this.questionModal.questionModal.css('display', 'block');
+				} else if (e.target.id === this.viewHintMenuID) {
+					// TODO: implement me...
+				} else if (e.target.id === this.debugMenuID) {
+					this.debugStr = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
+					// TODO: this is not separated... having a separate class like this doesn't make
+					//       sense b/c this class would need access to other elements in the DOM.
+					// 		 Also, how would you make it so that the text selection is maintained (and
+					//		 highlighted) across different tabs in the execution slider?
+					$('#debugger-view-div').highlight(this.debugStr); // TODO: remove this separate id tag
+				}
+			} else {
+				this.toggleMenuOff();
+				// TODO: Turn off the highlight as well?
+			}
+			return true;
+		});
+	}
+
+	addKeyUpListner() {
+		/* Remove the context menu on pressing the ESC key */
+		window.onkeyup = (e) => {
+			if (e.keyCode === 27) {
+				this.toggleMenuOff();
+			}
+		};
+	}
+
+	toggleMenuOn() {
+		if (!this.isContextMenuVisible) {
+			this.isContextMenuVisible = true;
+			this.contextMenu.addClass(this.activeClassName);
+		}
+	}
+
+	toggleMenuOff() {
+		if (this.isContextMenuVisible) {
+			this.isContextMenuVisible = false;
+			this.contextMenu.removeClass(this.activeClassName);
+		}
+	}
+
+	getPosition(e) {
+		var posx = 0;
+		var posy = 0;
+
+		if (!e) { var e = window.event; }
+
+		if (e.pageX || e.pageY) {
+			posx = e.pageX;
+			posy = e.pageY;
+		} else if (e.clientX || e.clientY) {
+			posx = e.clientX + document.body.scrollLeft + 
+					document.documentElement.scrollLeft;
+			posy = e.clientY + document.body.scrollTop + 
+					document.documentElement.scrollTop;
+		}
+		return {
+			x: posx,
+			y: posy
+		}
+	}
+
+	positionMenu(e) {
+		this.clickCoords = this.getPosition(e);
+		this.clickCoordsX = this.clickCoords.x;
+		this.clickCoordsY = this.clickCoords.y;
+
+		this.contextMenuWidth = this.contextMenu.width() + 4;
+		this.contextMenuHeight = this.contextMenu.height() + 4;
+
+		this.windowWidth = window.innerWidth;
+		this.windowHeight = window.innerHeight;
+
+		var styleStr = '';
+
+		if ((this.windowWidth - this.clickCoordsX) < this.contextMenuWidth) {
+			styleStr += "left: " + (this.windowWidth - this.contextMenuWidth) + "px;";
+		} else {
+			styleStr += "left: " + this.clickCoordsX + "px;";
+		}
+
+		if ((this.windowHeight - this.clickCoordsY) < this.contextMenuHeight) {
+			styleStr += "top: " + (this.windowHeight - this.contextMenuHeight) + "px;";
+		} else {
+			styleStr += "top: " + this.clickCoordsY + "px;";
+		}
+
+		this.contextMenu.attr("style", styleStr);
+	}
+
+	addQusetionModalHandler() {
+		var qModal = this.questionModal;
+		qModal.questionModalSubmitBtn.on("click", (e) => {
+			// Assumes that the user selected an appropriate block of code
+			var textBlock = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
+			qModal.questionModalCode.text(textBlock);
+			var question = qModal.questionModalText.val();
+			var checkpointID = qModal.questionID;
+			var testCases = qModal.questionModalTestCases.html();
+			var data = {
+				command: QUESTION_COMMAND,
+				question: question, // TODO: modify this
+				checkpointID: checkpointID, // TODO: check if the IDs actually match
+				testCases: testCases, // TODO: modify the format
+				userName: USER_NAME, // should've been already logged in and the userName is set
+				language: LAB_LANG,
+				code: textBlock
+			};
+			var URL = QUESTION_URL + "/" + LAB_ID;
+			//-- preferrably we will show a pop up to fill out the rest of the question details
+
+			$.post(
+			{
+				url: URL,
+				data: JSON.stringify(data),
+				success: (data, status) => {
+					// Send the message to a subset of people based on the result of AST analysis
+					QUESTION_SOCKET.emit('question', data); // Transfer the question in 'data'
+					qModal.questionModal.css('display', 'none');
+				},
+				error: (req, status, err) => {
+					console.log(err);
+				},
+				dataType: "json",
+				contentType: "application/json"
+			});
+		});
+
+		qModal.questionModalCloseBtn.on("click", (e) => {
+			qModal.questionModal.css('display', 'none');
+		});
+	}
 }
 
 class EditorController {
 	constructor() {
-		this.init();
-		// Lab-related; this should be in the authoring environment
-		var c1 = new Checkpoint();
-		c1.description = 'Write a function hello() that prints "Hello, world!" to the console.';
-		c1.testCases = [new TestCase(null, 'Hello, world!')];
-		var checkpoints = [c1];
-		this.lab = new Lab(checkpoints, SERVER_URL);
-	}
-
-	init() {
+		this.lab = new Lab();
 	}
 }
 
+////////////////////////////////////////////////////////////////////////////////////////
+// Saving the code with debouncing when its content has changed 
+//
+//	Dependencies:
+//	- jQuery (included)
+//	- jQuery doTimeout (included) http://benalman.com/projects/jquery-dotimeout-plugin/
+//	- diff-match-patch (included) https://code.google.com/p/google-diff-match-patch/
+//	- Ace (check out from GitHub into pwd) https://github.com/ajaxorg/ace-builds
+////////////////////////////////////////////////////////////////////////////////////////
+class CodeSaveController {
+	constructor() {
+		this.dmp = new diff_match_patch();
+		this.DEBOUNCE_MS = 5000;// milliseconds of debouncing (i.e., 'clustering' a
+								// rapid series of edit actions as a single diff)
+								// set to 'null' for no debouncing
+		this.editor = null;
+		this.curText = '';
+
+		this.init();
+	}
+
+	init() {
+		// Get the editor instance instantiated from controller.js
+		this.editor = ace.edit("editor"); // TODO: Why don't we use the already existing instance?
+		this.addContentChangeHandler();
+	}
+
+	addContentChangeHandler() {
+		function snapshotDiff(self) {
+			var newText = self.editor.getValue();
+			var timestamp = new Date().getTime();
+
+			if (self.curText != newText) {
+				/*
+				The two key function calls here are diff_main followed by diff_toDelta
+				Each 'd' field is in the following format:
+				http://downloads.jahia.com/downloads/jahia/jahia6.6.1/jahia-root-6.6.1.0-aggregate-javadoc/name/fraser/neil/plaintext/DiffMatchPatch.html#diff_toDelta(java.util.LinkedList)
+				Crush the diff into an encoded string which describes the operations
+				required to transform text1 into text2. E.g. =3\t-2\t+ing -> Keep 3
+				chars, delete 2 chars, insert 'ing'. Operations are tab-separated.
+				Inserted text is escaped using %xx notation.
+				*/
+				var delta = {
+					t: timestamp,
+					d: self.dmp.diff_toDelta(self.dmp.diff_main(self.curText, newText))
+				};
+				self.sendCodeEditSaveRequest(delta);
+				self.curText = newText;
+		  	}
+		}
+
+		this.editor.on('change', (e) => {
+			if (this.DEBOUNCE_MS > 0) {
+				$.doTimeout('editorChange', this.DEBOUNCE_MS, () => { snapshotDiff(this); });
+			} else {
+				snapshotDiff(this);
+			}
+		});
+	}
+
+	sendCodeEditSaveRequest(delta) {
+		var data = {
+			command: CODE_EDIT_SAVE_COMMAND,
+			userName: USER_NAME,
+			delta: delta,
+			code: this.editor.getValue()
+		};
+		var URL = LAB_URL + "/" + LAB_ID;
+		$.post(
+		{
+			url: URL,
+			data: JSON.stringify(data),
+			success: (data, status) => {
+				// ...
+			},
+			error: (req, status, err) => {
+				console.log(err);
+			},
+			dataType: "json",
+			contentType: "application/json"
+		});
+	}
+}
+
+
 $(document).ready(function() {
 	var editorCtrl = new EditorController();
-	var rightClickCtrl = new RightClickController(editorCtrl.lab.editorObj);
+	var codeSaveCtrl = new CodeSaveController();
 });
 

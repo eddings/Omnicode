@@ -4,6 +4,7 @@ module.exports = function(io, db) {
 	var stream = require('stream');
 	var fs = require('fs');
 	var mkdirp = require('mkdirp');
+	var md = require('markdown').markdown;
 	var router = express.Router();
 	var questions = [];
 
@@ -64,6 +65,75 @@ module.exports = function(io, db) {
 			});
 		}
 	});
+	function createTestcaseHTML(testcases, ckptNum) {
+		if (!testcases) {
+			return;
+		}
+		/*
+		var tableHTML =
+		'<table>' +
+			'<tr>' +
+				'<th>#</th>' +
+				'<th>Testcase</th>' +
+				'<th>Expected</th>' +
+				'<th>Status</th>' +
+			'</tr>';
+		testcases.forEach((ex, idx) => {
+			tableHTML +=
+			'<tr>' +
+				'<td>' + idx + '</td>' +
+				'<td>' + ex.source + '</td>' +
+				'<td>' + ex.want + '</td>' +
+				'<td><img id="case' + ckptNum + idx + '" src="../images/minus.png"/></td>' +
+			'</tr>';
+		});
+
+		tableHTML +=
+		'</table>'
+		*/
+
+		var html = '';
+		testcases.forEach((c, idx) => {
+			html += '<div id="testcase-html-div' + ckptNum + '_' + idx + '">';
+			html +=		'<p><b>Testcase source:</b> ' + c.source + '</p>';
+			html += 	'<p><b>Expected result:</b> ' + c.want + '</p>';
+			html +=		'<p><B>Status:</b> ' + '<img id="case' + ckptNum + '_' + idx + '" src="../images/minus.png"/>' + '</p>';
+			html += '</div>';
+		});
+		return html;
+	}
+
+	function parseDocstringHTML(docstrings, docstringHTMLs) {
+		if (docstrings.length > 0) {
+			var labDoc = docstrings[0];
+			var checkpointDocs = docstrings.slice(1);
+			var tree = md.parse(labDoc.docstring);
+			var HTMLTree = md.toHTMLTree(tree);
+
+			if (HTMLTree[0] === 'html') {
+				var rest = HTMLTree.splice(1);
+				HTMLTree.splice(1, 0, ["div", {"id": "labdoc-html-div"}]);
+				HTMLTree[1] = HTMLTree[1].concat(rest);
+			}
+
+			var html = md.renderJsonML(HTMLTree);
+			docstringHTMLs.push(html);
+
+			checkpointDocs.forEach((d, idx) => {
+				var tree = md.parse(d.docstring.split('------')[0]);
+				var HTMLTree = md.toHTMLTree(tree);
+
+				if (HTMLTree[0] === 'html') {
+					var rest = HTMLTree.splice(1);
+					HTMLTree.splice(1, 0, ["div", {"id": "checkpoint-html-div" + idx}]);
+					HTMLTree[1] = HTMLTree[1].concat(rest);
+				}
+
+				var html = md.renderJsonML(HTMLTree);
+				docstringHTMLs.push({name: d.name, descHTML: html, testCaseHTML: createTestcaseHTML(d.examples, idx), testCases: d.examples, questions: []});
+			});
+		}
+	}
 
 	router.post('/', (req, res, next) => {
 		var body = req.body;
@@ -109,6 +179,8 @@ module.exports = function(io, db) {
 				}
 
 			    var newLab = {
+			    	filePath: '',
+			    	pickleFilePath: '',
 			        labID: labID,
 			        labDoc: {
 			            labDesc: '',
@@ -147,20 +219,20 @@ module.exports = function(io, db) {
 			}
 
 			var dirPath = './labs/' + labID;
-			var filePath = dirPath + '/' + fileName;
+			var labFilePath = dirPath + '/' + fileName;
 
 			mkdirp(dirPath, (err) => {
 				// Create the lab directory
 				if (err) return console.error(err);
 
-				fs.writeFile(filePath, fileContent, (err) => {
+				fs.writeFile(labFilePath, fileContent, (err) => {
 					// Create the lab file
 					if (err) return console.error(err);
 
 					var splitterFilePath = './public/python/PythonTutor/doctest_splitter.py';
 					var readerFilePath = './public/python/PythonTutor/doctest_reader.py';
 					// execute the code
-					var pickleProcess = cprocess.spawn(lang, [splitterFilePath, filePath]);
+					var pickleProcess = cprocess.spawn(lang, [splitterFilePath, labFilePath]);
 					
 					var pickleProcess_stderrData = [];
 					var pickleProcess_stdoutData = [];
@@ -181,10 +253,10 @@ module.exports = function(io, db) {
 						if (pickleProcess_stderrData.length !== 0) {
 							return res.status(500).send(Buffer.concat(pickleProcess_stderrData));
 						} else {
-							var doctestsFileName = fileName.split('.')[0] + '_doctests.pickle';
-							var doctestsFilePath = './' + doctestsFileName;
+							var pickleFileName = fileName.split('.')[0] + '_doctests.pickle';
+							var pickleFilePath = './' + pickleFileName;
 							// Ignore the stdout data from pickleProcess (mostly uninformative status strings)
-							var readerProcess = cprocess.spawn('python', [readerFilePath, doctestsFilePath]);
+							var readerProcess = cprocess.spawn('python', [readerFilePath, pickleFilePath]);
 
 							readerProcess.stderr.on('data', (chunk) => {
 								readerProcess_stderrData.push(chunk);
@@ -206,7 +278,12 @@ module.exports = function(io, db) {
 										if (err) {
 											return console.error('Skeleton file read error: ' + err);
 										}
-										return res.status(200).send({docstrings: Buffer.concat(readerProcess_stdoutData).toString('utf-8').trim(), skeleton: data});
+										db.update({labID: labID}, {$set: {filePath: labFilePath, pickleFilePath: pickleFilePath}});
+
+										var docstrings = JSON.parse(Buffer.concat(readerProcess_stdoutData).toString('utf-8').trim());
+										var docstringHTMLs = [];
+										parseDocstringHTML(docstrings, docstringHTMLs);
+										return res.status(200).send({docstringHTMLs: docstringHTMLs, skeleton: data});
 									});
 								}
 							});

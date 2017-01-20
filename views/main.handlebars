@@ -87,40 +87,20 @@
 
 <div id="lab-doc" class="lab-doc">
     <!-- Question Modal -->
-    {{#each labDoc.checkpoints}}
-    <div id="question-modal{{@index}}" class="question-modal">
+    <div id="question-modal" class="question-modal">
         <div class="question-modal-content">
-            <span id="question-modal-close{{@index}}" class="question-modal-close">&times;</span>
-            <p><b>Checkpoint</b></p>
-            <p id="question-modal-checkpoint{{@index}}">{{{desc}}}</p>
-            <p><b>Test cases</b></p>
-            <table id="question-modal-testcases{{@index}}">
-                <tr>
-                    <th>#</th>
-                    <th>Input</th>
-                    <th>Output</th>
-                    <th>State</th>
-                </tr>
-                {{#each testCases}}
-                <tr>
-                    <td>{{@index}}</td>
-                    <td>{{inputType}}: {{input}}</td>
-                    <td>{{outputType}}: {{output}}</td>
-                    <!-- 'question' will be served at /question/intro_programming -->
-                    <td><img id="modal-checkpoint{{@../index}}-testcase{{@index}}-state-img" src="../images/error.png"/></td>
-                </tr>
-                {{/each}}
-            </table>
+            <span id="question-modal-close" class="question-modal-close">&times;</span>
+            <p id="question-modal-checkpoint"></p>
+            <p id="question-modal-testcases"></p>
             <p><b>Code</b></p>
-            <pre id="question-modal-code{{@index}}"></pre>
+            <pre id="question-modal-code"></pre>
             <p>
-                <label for="question-modal-text{{@index}}">Question</label>
-                <textarea id="question-modal-text{{@index}}" class="form-control" rows="5"></textarea>
+                <label for="question-modal-text">Question</label>
+                <textarea id="question-modal-text" class="form-control" rows="5"></textarea>
             </p>
-            <button id="question-modal-submit-btn{{@index}}" class="btn btn-primary btn-sm">Submit</button>
+            <button id="question-modal-submit-btn" class="btn btn-primary btn-sm">Submit</button>
         </div>
     </div>
-    {{/each}}
 
     <!-- Notification Modal for Quetsions -->
     <div id="question-notification-modal" class="notification-modal">
@@ -142,15 +122,22 @@
         </div>
     </div>
 
+    <!-- System Modal -->
+     <div id="warning-notification-modal" class="notification-modal">
+        <div id="warning-notification-modal-content" class="warning-modal-content">
+            <span id="warning-notification-modal-close" class="notification-modal-close">&times;</span>
+            <div id="warning-notification-modal-text">
+            </div>
+        </div>
+    </div>   
+
     <!-- Lab description -->
-    <div id="lab-desc" class="lab-desc">
-        {{{labDoc.labDescHTML}}}
-    </div>
+    {{{labDoc.labDescHTML}}}
 
     <!-- Checkpoints -->
     {{#each labDoc.checkpoints}}
         {{{descHTML}}}
-        {{{testCasesHTML}}}
+        {{{testCaseHTML}}}
     {{/each}}
     <!--
     {{#each labDoc.checkpoints}}
@@ -195,7 +182,7 @@
 
 <!-- Code Editor Controls -->
 <div id="code-button" class="code-button">
-    <button id="runBtn" class="btn btn-primary btn-sm">Run</button>
+    <button id="runAllTestsBtn" class="btn btn-primary btn-sm">Run all the tests</button>
     <button id="debugBtn" class="btn btn-defautl btn-sm">Debug</button>
     <button id="saveAndPublishBtn" class="btn btn-primary btn-sm">Save</button>
     <p id="editor-status" style="display: inline-block;"></p>
@@ -235,7 +222,6 @@
 <script src="../javascripts/jquery.ba-dotimeout.min.js" type="text/javascript" charset="utf-8"></script> <!-- jQuery doTimeout -->
 <script src="../javascripts/diff_match_patch.js" type="text/javascript" charset="utf-8"></script> <!-- diff-match-patch -->
 <script src="../javascripts/globals.js" type="text/javascript" charset="utf-8"></script> <!-- Custom Constants -->
-<script src="../javascripts/save_code.js" type="text/javascript" charset="utf-8"></script> <!-- Saving code AST -->
 <script src="../javascripts/jqconsole.js" type="text/javascript" charset="utf-8"></script> <!-- jqConsole -->
 <script src="../javascripts/test_parser.js" type="text/javascript" charset="utf-8"></script> <!-- Testcase Parser -->
 <script src="../javascripts/controller.js" type="text/javascript" charset="utf-8"></script> <!-- Custom controller code -->

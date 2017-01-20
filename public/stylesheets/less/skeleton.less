@@ -26,19 +26,22 @@ table, tr, td, th, td {
 .right-pane {
 	position: absolute;
 	left: 50vw;
-	right: 10px;
-    width: ~"calc(50vw - 18px)";
+    width: 50vw;
 }
 .left-pane {
 	position: absolute;
     left: 10px;
-    right: 20px;
-    width: ~"calc(50vw - 30px)";
+    right: 10px;
+    bottom: 10px;
+    width: ~"calc(50vw - 10px)";
 }
 
 .lab-doc {
     .left-pane;
 	top: 60px;
+    height: ~"calc(100vh - 70px)";
+    overflow-y: scroll;
+
 }
 
 .info {
@@ -102,34 +105,52 @@ table, tr, td, th, td {
         .right-pane;
         top: ~"calc(100vh - 185px - 10px)";
         height: 20px;
+        left: ~"calc(50vw + 5px)";
+        right: 5px;
+        width: ~"calc(50vw - 10px)";
     }
     #console {
         .right-pane;
         top: ~"calc(100vh - 155px)";
+        left: ~"calc(50vw + 5px)";
+        right: 5px;
+        width: ~"calc(50vw - 10px)";
         height: 145px;
     }
     #console-clear {
         .right-pane;
-        top: ~"calc(100vh - 10px)";
+        top: ~"calc(100vh - 20px)";
         height: 10px;
+        left: ~"calc(50vw + 5px)";
+        right: 5px;
+        width: ~"calc(50vw - 10px)";
     }
     #debuggerViewDiv {
         display: none;
         .right-pane;
         top: ~"calc(100vh - 155px)";
         height: 130px;
+        left: ~"calc(50vw + 5px)";
+        right: 5px;
+        width: ~"calc(50vw - 10px)";
         overflow-y: scroll;
     }
     #debuggerRangeSlider {
         display: none;
         .right-pane;
         top: ~"calc(100vh - 25px)";
+        left: ~"calc(50vw + 5px)";
+        right: 5px;
+        width: ~"calc(50vw - 10px)";
         height: 10px;
     }
     #debuggerRangeSliderSpan {
         display: none;
         .right-pane;
         top: ~"calc(100vh - 10px)";
+        left: ~"calc(50vw + 5px)";
+        right: 5px;
+        width: ~"calc(50vw - 10px)";
         height: 10px;
     }
     /* Author view */
@@ -189,29 +210,52 @@ table, tr, td, th, td {
         .right-pane;
         top: ~"calc(100vh - 230px - 10px)";
         height: 20px;
+        left: ~"calc(50vw + 5px)";
+        right: 5px;
+        width: ~"calc(50vw - 10px)";
     }
     #console {
         .right-pane;
         top: ~"calc(100vh - 200px)";
         height: 180px;
+        left: ~"calc(50vw + 5px)";
+        right: 5px;
+        width: ~"calc(50vw - 10px)";
+    }
+    #console-clear {
+        .right-pane;
+        top: ~"calc(100vh - 20px)";
+        left: ~"calc(50vw + 5px)";
+        right: 5px;
+        width: ~"calc(50vw - 10px)";
+        height: 10px;
     }
     #debugger-view-div {
         display: none;
         .right-pane;
         top: ~"calc(100vh - 200px)";
         height: 155px;
+        left: ~"calc(50vw + 5px)";
+        right: 5px;
+        width: ~"calc(50vw - 10px)";
         overflow-y: scroll;
     }
     #debugger-range-slider {
         display: none;
         .right-pane;
         top: ~"calc(100vh - 25px)";
+        left: ~"calc(50vw + 5px)";
+        right: 5px;
+        width: ~"calc(50vw - 10px)";
         height: 10px;
     }
     #debugger-range-slider-span {
         display: none;
         .right-pane;
         top: ~"calc(100vh - 10px)";
+        left: ~"calc(50vw + 5px)";
+        right: 5px;
+        width: ~"calc(50vw - 10px)";
         height: 10px;
     }
     /* Author view */
@@ -324,7 +368,7 @@ table, tr, td, th, td {
 
 /* Modal Content */
 .notification-modal-content {
-    background-color: rgba(255,192,45,0.7); /* Black w/ opacity */
+    background-color: rgba(255,192,45,0.7); /* Yellow w/ opacity */
     padding-left: 10px;
     padding-right: 10px;
     /*
@@ -334,6 +378,11 @@ table, tr, td, th, td {
     width: 25vw;
     height: 30vh;
 	*/
+}
+.warning-modal-content {
+    background-color: rgba(255,187,187,0.7); /* Red w/ opacity */
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
 /* The Close Button */
@@ -494,3 +543,9 @@ table, tr, td, th, td {
 
 /* Highlight color */
 .highlight { background-color: yellow }
+
+/* Ace editor gutter style */
+.redMarker,.redGutter {
+  /*background-color: #ffecec;*/ /* from GitHub diffs */
+  background-color: #ffbbbb; /* a wee bit darker, from GitHub */
+}

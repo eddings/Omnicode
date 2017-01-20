@@ -95,28 +95,19 @@ fs.readFile('skeleton.py', 'utf8', (err, data) => {
     "procedure like this.</p>";
 
     var intro_programming_doc = {
+        filePath: '',
+        pickleFilePath: '',
         labID: "intro_programming",
         labDoc: {
             labDescHTML: labDesc,
             skeletonCode: '',
             checkpoints: [
                 {
+                    name: '',
                     descHTML: ckpt1_desc,
-                    testCasesHTML: ''
-                    testCases: [], // {source, want}
+                    testCasesHTML: '',
+                    testCases: [], // {source: 'asdf', options: {}, want: 'asdf', exc_msg: null}
                     quetsions: []
-                },
-                {
-                    descHTML: ckpt2_desc,
-                    testCasesHTML: ''
-                    testCases: [],
-                    questions: []
-                },
-                {
-                    descHTML: ckpt3_desc,
-                    testCasesHTML: ''
-                    testCases: [],
-                    questions: []
                 }
             ]
         },

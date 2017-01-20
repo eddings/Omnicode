@@ -33,7 +33,7 @@ if __name__ == "__main__":
     try:
         fullpath = sys.argv[1]
         assert fullpath.endswith(".pickle")
-        with open(fullpath, 'rb') as f:
+        with open(fullpath, 'rU') as f: # use 'U' to work on Windows
             tests = pickle.load(f)
             all_encoded_tests = [encode_doctest(t) for t in tests]
             print(json.dumps(all_encoded_tests, indent=2))

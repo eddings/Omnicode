@@ -1,25 +1,35 @@
 module.exports = function ast(db) {
+	var cprocess = require('child_process');
 	this.db = db;
 
 	this.compareCode = function(othrCode, qstrCode, name, targets, cb) {
 		// Run a python script to determine whether or not
 		// otherStudentCode is "similar" to questionerCode
-		var s = new require('stream').Readable();
-		const process = require('child_process').spawn('python', ['./public/python/ast.py', othrCode, qstrCode]);
+		const pyprocess = cprocess.spawn('python', ['./public/python/astCompare.py', othrCode, qstrCode]);
 
-		// execute the code
+		// execute the code 
 		const chunks = [];
 
-		process.stderr.on('data', (chunk) => {
+		pyprocess.stderr.on('data', (chunk) => {
+			chunks.push(chunk);
+		});
+		pyprocess.stdout.on('data', function(chunk) {
 			chunks.push(chunk);
 		});
 
-		process.stdout.on('data', function(chunk) {
-			chunks.push(chunk);
-		});
+		pyprocess.stdout.on('end', () => {
+			var errorHandle = 'pythonparser.diagnostic.Error: <unknown>:';
+			var handleLength = errorHandle.length;
+			var bufferStr = Buffer.concat(chunks).toString('utf-8').trim();
+			var split = bufferStr.slice(bufferStr.search(errorHandle) + handleLength).split(/:|-/);
 
-		process.stdout.on('end', () => {
+			var startLineNo = split[0];
+			var endLineNo = split[2];
+			var startColNo = split[1];
+			var endColNo = split[3];
+			
 			// Python return string: False | True
+			console.log(bufferStr.slice(bufferStr.search(errorHandle) + handleLength).split(/:|-/));
 			if (Buffer.concat(chunks).toString('utf-8').trim() === "True") {
 				targets.push(name);
 			}

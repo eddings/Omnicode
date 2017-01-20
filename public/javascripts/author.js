@@ -148,37 +148,6 @@ class AuthorController {
 	}
 
 	sendLoadRequest(fileName, fileContent) {
-		function createTestcaseHTML(checkpoints, testcases, ckptNum) {
-			if (!testcases || testcases.length === 0) {
-				return;
-			}
-
-			var tableHTML =
-			'<table>' +
-				'<tr>' +
-					'<th>#</th>' +
-					'<th>Testcase</th>' +
-					'<th>Expected</th>' +
-					'<th>Status</th>' +
-				'</tr>';
-			testcases.forEach((ex, idx) => {
-				checkpoints[ckptNum].testCases.push({source: ex.source, want: ex.want});
-				tableHTML +=
-				'<tr>' +
-					'<td>' + idx + '</td>' +
-					'<td>' + ex.source + '</td>' +
-					'<td>' + ex.want + '</td>' +
-					'<td><img id="case' + ckptNum + idx + '" src="../images/minus.png"/></td>' +
-				'</tr>';
-			});
-
-			tableHTML +=
-			'</table>'
-
-			checkpoints[ckptNum].testCasesHTML = tableHTML;
-			return tableHTML;
-		}
-
 		var request = {
 			labID: LAB_ID,
 			command: LOAD_COMMAND,
@@ -191,19 +160,16 @@ class AuthorController {
 			url: AUTHOR_URL,
 			data: JSON.stringify(request),
 			success: (data) => {
-				var docstrings = JSON.parse(data.docstrings);
-				if (docstrings.length > 0) {
-					var doc = docstrings[0];
-					var checkpoints = docstrings.slice(1);
-					var labDescHTML = markdown.toHTML(doc.docstring);
-					this.labDoc.append(labDescHTML);
-					this.labDescHTML = labDescHTML;
-					checkpoints.forEach((cp, idx) => {
-						var checkpointDescHTML = markdown.toHTML(cp.docstring.split('------')[0]);
-						this.checkpoints.push({descHTML: checkpointDescHTML, testCasesHTML: '', testCases: [], questions: []});
-						
-						this.labDoc.append(checkpointDescHTML);
-						this.labDoc.append(createTestcaseHTML(this.checkpoints, cp.examples, idx));
+				var docstringHTMLs = data.docstringHTMLs;
+				if (docstringHTMLs.length > 0) {
+					var labDocHTML = docstringHTMLs[0];
+					var checkpointHTMLs = docstringHTMLs.slice(1);
+					this.labDoc.append(labDocHTML);
+					this.labDescHTML = labDocHTML;
+					checkpointHTMLs.forEach((cp, idx) => {
+						this.checkpoints.push(cp);
+						this.labDoc.append(cp.descHTML);
+						this.labDoc.append(cp.testCaseHTML);
 					});
 				}
 				this.code = data.skeleton;
