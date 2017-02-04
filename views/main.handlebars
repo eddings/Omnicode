@@ -86,6 +86,17 @@
 </div>
 
 <div id="lab-doc" class="lab-doc">
+    <!-- Debug Modal -->
+    <div id="debug-modal" class="debug-modal">
+        <div class="debug-modal-content">
+            <span id="debug-modal-close" class="debug-modal-close">&times;</span>
+            <div id="debug-modal-code-div">
+            </div>
+            <p id="debug-modal-status"></p>
+            <button id="debug-modal-ok-btn" class="btn btn-primary btn-sm">Ok</button>
+        </div>
+    </div>
+
     <!-- Question Modal -->
     <div id="question-modal" class="question-modal">
         <div class="question-modal-content">
@@ -94,6 +105,7 @@
             <p id="question-modal-testcases"></p>
             <p><b>Code</b></p>
             <pre id="question-modal-code"></pre>
+            <p id="question-modal-status"></p>
             <p>
                 <label for="question-modal-text">Question</label>
                 <textarea id="question-modal-text" class="form-control" rows="5"></textarea>
@@ -198,11 +210,35 @@
 <div id="debugger-range-slider"></div>
 <span id="debugger-range-slider-span"></span>
 
-<!-- Context Menu -->
-<nav id="context-menu" class="context-menu">
+<!-- Context Menus with the Debug Option-->
+<nav id="context-menu-with-debug" class="context-menu">
     <ul class="context-menu__items">
         <li class="context-menu__item">
+            <a href="#" id="menu-run" class="context-menu__link"><i class="fa fa-edit"></i> Run this testcase</a>
+        </li>    
+        <li class="context-menu__item">
             <a href="#" id="menu-debug" class="context-menu__link"><i class="fa fa-edit"></i> Debug</a>
+        </li>
+        <li class="context-menu__item">
+            <a href="#" id="menu-visual-debug" class="context-menu__link"><i class="fa fa-edit"></i> Visual Debug</a>
+        </li>
+        <li class="context-menu__item">
+            <a href="#" id="menu-view-a-hint-debug" class="context-menu__link"><i class="fa fa-edit"></i> View a hint</a>
+        </li>
+        <li class="context-menu__item">
+            <a href="#" id="menu-ask-a-question-debug" class="context-menu__link"><i class="fa fa-edit"></i> Ask a quetsion</a>
+        </li>
+    </ul>
+</nav>
+
+<!-- Context Menus with Debug Highlight Option-->
+<nav id="context-menu-with-debug-highlight" class="context-menu">
+    <ul class="context-menu__items">
+        <li class="context-menu__item">
+            <a href="#" id="menu-debug-highlight" class="context-menu__link"><i class="fa fa-edit"></i> Debug - highlight selected code</a>
+        </li>
+        <li class="context-menu__item">
+            <a href="#" id="menu-debug-dehighlight" class="context-menu__link"><i class="fa fa-edit"></i> Debug - dehighlight selected code</a>
         </li>
         <li class="context-menu__item">
             <a href="#" id="menu-view-a-hint" class="context-menu__link"><i class="fa fa-edit"></i> View a hint</a>

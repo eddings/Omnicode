@@ -29,39 +29,53 @@ module.exports = function(io, db) {
 		var userName = req.query.user;
 		var password = req.query.password;
 		var authorRole = "author";
+		var authorFound = false;
+		var userCount = 0;
 
 		if (labID && userName && password) {
-			db.find(
-				{$and: [
-						{labID: labID},
-						{'users.userName': userName},
-						{'users.password': password},
-						{'users.role': authorRole}
-				]},
-				(err, docs) => {
+			db.find({labID: labID}, 
+				(err, docs) => { 
+					if (err) { return res.status(500).send("DB find error"); }
+
 					if (docs.length === 1) {
-						res.render('author',
-							{
-					  			title: 'Labyrinth - ' + labID,
-					  			labID: labID,
-					  			language: 'python',
-					  			labDoc: docs[0].labDoc,
-					  			authorLoggedIn: true,
-					  			user: docs[0].users[findUser(docs[0].users, userName)]
+						// This is dumb. Why can't I use return res.status(200).render()
+						// and expect that it will return from the router.get call?
+						docs[0].users.forEach((user, idx) => {
+							userCount++;
+							if (user.userName === userName &&
+								user.password === password &&
+								user.role === authorRole) {
+								authorFound = true;
+								return res.status(200).render('author',
+									{
+							  			title: 'Labyrinth - ' + labID,
+							  			labID: labID,
+							  			language: 'python',
+							  			labDoc: docs[0].labDoc,
+							  			authorLoggedIn: true,
+							  			user: docs[0].users[findUser(docs[0].users, userName)]
+									}
+								);
 							}
-						);
+						});
+
+						if (userCount === docs[0].users.length && !authorFound) {
+							res.status(200).render('error',
+							{
+								title: 'Labyrinth - ' + labID,
+								errorMsg: 'You do not have the permission to modify this lab'
+							});
+						}
 					} else {
-						console.log('You do not have permission to author this lab');
-						res.status(500).send('You do not have permission to author this lab');
+						return res.status(500).send('System Error: Lab ID not uniquified');
 					}
 				}
 			);
 		} else {
-			console.log('Error, invalid URL');
 			res.status(500).render('error',
 			{
 				title: 'Labyrinth - ' + labID,
-				errorMsg: "Something went wrong ... Please check the lab ID and the URL"
+				errorMsg: 'Please check your URL'
 			});
 		}
 	});
@@ -160,7 +174,7 @@ module.exports = function(io, db) {
 					return res.status(200).send({ok: false, reason: "Lab ID already exists"});
 				}
 
-				res.status(200).send({ok: true});
+				return res.status(200).send({ok: true});
 			});
 		} else if (command === "signup") {
 			//////////////////////////////////////////////
@@ -175,6 +189,7 @@ module.exports = function(io, db) {
 				}
 
 				if (docs.length > 0) {
+					console.log('in2');
 					return res.status(200).send({ok: false, reason: "Lab ID already exists"});
 				}
 
@@ -303,8 +318,31 @@ module.exports = function(io, db) {
 			var labDocObj = {};
 			labDocObj[labDocSearchStr] = doc;
 
-			db.update({labID: labID}, {$set: labDocObj}, {}, () => {});
-			res.status(200).send({ok: true, reason: "The lab is saved and published"});
+			db.find({labID: labID}, (err, docs) => {
+				if (err) {
+					console.log('in1');
+					console.error(err);
+					return res.status(500).render('error',
+						{
+							title: 'Labyrinth - ' + labID,
+							errorMsg: 'DB find error'
+						});
+				}
+
+				if (docs.length !== 1) {
+					return res.status(500).render('error',
+						{
+							title: 'Labyrinth - ' + labID,
+							errorMsg: 'System Error: Lab ID not uniquified'
+						});
+				}
+				console.log('userName: ' + body.userName);
+
+				var userIdx = findUser(docs[0].users, body.userName);
+				var codeQueryStr = "users." + userIdx + ".code";
+				db.update({labID: labID}, {$set: {"labDoc": doc, codeQueryStr: doc.skeletonCode}}, {}, () => {});
+				res.status(200).send({ok: true, reason: "The lab is saved and published"});
+			});
 		} else {
 			console.log("Unsupported command");
 			res.status(500).send("Unsupported command");
@@ -312,4 +350,4 @@ module.exports = function(io, db) {
 	});
 
 	return router;
-}
+};

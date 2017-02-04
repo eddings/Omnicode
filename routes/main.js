@@ -5,6 +5,8 @@ module.exports = function(io, db) {
 	var router = express.Router();
 	var cprocess = require('child_process');
 	var stream = require('stream');
+	var jsonParser = require('./parseASTJson');
+	var parser = new jsonParser();
 
 	function computeIndentLevel(lineTabSplitted) {
 		var indentLevel = 0;
@@ -15,23 +17,128 @@ module.exports = function(io, db) {
 		return indentLevel;
 	}
 
-	function commentAndInjectPass(lines, start, end, indentLevel) {
-		for (let i = start; i < end; ++i) {
+	function comment(lines, start, end) {
+		// Inclusive of both ends (start, end)
+		for (let i = start; i <= end; ++i) {
 			lines[i] = '#' + lines[i].slice(1);
 		}
+	}
+
+	function addPassStatement(lines, end, indentLevel) {
+		// Construct a pass statement with the corresponding indentation level
 		var passStr = 'pass';
 		for (let i = 0; i < indentLevel; ++i) {
 			passStr = '    ' + passStr;
 		}
-		lines.splice(end, 1, passStr); // Don't append another line in order to maintain the
-									   // line no. information of where the actual syntax error happened
+
+		lines.splice(end, 1, passStr); // Don't append another line in order to 
+									   // maintain the line no. information of 
+									   // where the actual syntax error happened
+	}
+
+	function commentAndInjectPass(lines, start, end, indentLevel) {
+		// Inclusive of both ends (start, end)
+		comment(lines, start, end);
+		addPassStatement(lines, end, indentLevel);
 		return lines.join('\n');
 	}
 
+	function commentThisLineAndLower(code, errorLineIdx) {
+		////////////////////////////////////////////////////
+		// Uses heuristics; comment out the error line 
+		// and lower if those lines have the same or higher
+		// level of indentation
+		////////////////////////////////////////////////////
+		var lines = code.split('\n');
+		var tabSpliitedLines = [];
+		var lastLineIdx = lines.length - 1;
+
+		lines.forEach((line, idx) => {
+			// Heuristics; the indentation level will hopefully 
+			// be the same
+			tabSpliitedLines[idx] = line.split('    ');
+		});
+
+		var indentLevel = computeIndentLevel(tabSpliitedLines[errorLineIdx]);
+		var down = errorLineIdx + 1;
+		
+		while (down < lastLineIdx) {
+			if (computeIndentLevel(tabSpliitedLines[down]) >= indentLevel) down++;
+			else break; // break as soon as a different indentation level seen
+		}
+
+		// The down variable is off the boundary of the function body by 1 -- adjust for it
+		return {
+			code: commentAndInjectPass(lines, errorLineIdx, down-1, indentLevel),
+			range: {
+				start: {
+					row: errorLineIdx,
+					column: -1 // Filler value. DO NOT USE THIS
+				},
+				end: {
+					row: down-1,
+					column: -1 // Filler value. DO NOT USE THIS
+				}
+			}
+		};
+	}
+
+	////////////////////////////////////////////////////
+	// Comments out function lines 'from' to 'to'
+	////////////////////////////////////////////////////
+	function commentFromTo(code, from, to) {
+		// Inclusive of both ends (start, end)
+		var lines = code.split('\n');
+		comment(lines, from, to);
+		return lines.join('\n');
+	}
+
+	////////////////////////////////////////////////////
+	// Line-wise comparison and tests whether the ranges
+	// overlap with each other
+	////////////////////////////////////////////////////
+	function overlaps(range1, range2) {
+		// Checks whether range1 and range2 are well-formed ranges
+		if (range1.start.row > range1.end.row
+			|| range2.start.row > range2.end.row) {
+			// Ill-formed
+			return false;
+		}
+
+		// Both end inclusive. No matter what, either the start or
+		// the end of a range should be included in the other range.
+		// The role of the ranges is irrelevant, since if one of the 
+		// ranges' ends is included in the other, it implies an
+		// equivalent inclusion with roles interchanged.
+		// Notice that the following if statements simply test whether
+		// either end point of range1 (start.row or end.row) is contained
+		// in the either range
+		if (range2.start.row <= range1.start.row
+			&& range1.start.row <= range2.end.row) {
+			return true;
+		}
+
+		if (range2.start.row <= range1.end.row
+			&& range1.end.row <= range2.end.row) {
+			return true;
+		}
+
+		return false;
+	}
+
+	////////////////////////////////////////////////////
+	// This function comments out only the body of the 
+	// containing function that the given line of code
+	// is included in, and replaces its last statement
+	// with a pass statement. Uses heuristics (assumes
+	// uniform 4-space indentation at all times)
+	// DO NOT USE THIS FUNCTION IF YOU NEED TO PRECISELY 
+	// COMMENT OUT THE BODY OF A FUNCTION IN ALL CASES
+	////////////////////////////////////////////////////
 	function commentContainingFunctionBody(code, errorLineNo) {
 		var lines = code.split('\n');
 		var tabSpliitedLines = [];
-		var lineNo = lines.length;
+		var lineLen = lines.length;
 		var indentLevel = 0;
 
 		lines.forEach((line, idx) => {
@@ -48,7 +155,7 @@ module.exports = function(io, db) {
 		}
 
 		var down = errorLineIdx + 1;
-		var lastLineIdx = lineNo - 1;
+		var lastLineIdx = lineLen - 1;
 		while (down <= lastLineIdx) {
 			if (computeIndentLevel(tabSpliitedLines[down]) >= indentLevel) down++;
 			else break; // break as soon as a different indentation level seen
@@ -57,77 +164,69 @@ module.exports = function(io, db) {
 		return commentAndInjectPass(lines, up+1, down-1, indentLevel);
 	}
 
-	function commentErrorLines(code, obj, cb) {
-		var runningCode = '';
+	////////////////////////////////////////////////////
+	// This function comments out the entire function
+	// that the given line of code is included in
+	////////////////////////////////////////////////////
+	function commentContainingFunction(code, errorLineNo) {
+	}
 
-		//const pyprocess = cprocess.spawn('python', ['./public/python/ast.py', code]);
-		var s = new stream.Readable();
-		var pyprocess = cprocess.spawn('python');
+	function commentErrorLines(obj, cb) {
+		const pyprocess = cprocess.spawn('python', ['./public/python/parse_python_to_json.py', obj.code]);
 
-		s.push(code);
-		s.push(null);
-		s.pipe(pyprocess.stdin);
-
-		// execute the code 
-		const chunks = [];
+		// execute the code
+		const stdoutChunks = [];
+		const errorChunks = [];
 
 		pyprocess.stderr.on('data', (chunk) => {
-			chunks.push(chunk);
+			errorChunks.push(chunk);
 		});
 
 		pyprocess.stdout.on('data', function(chunk) {
-			chunks.push(chunk);
+			stdoutChunks.push(chunk);
 		});
 
 		pyprocess.stdout.on('end', () => {
-			/*
-			// There's no need to do AST analysis to catch syntactic errors.
-			// Just run the code itself with python
-			var errorHandle = 'pythonparser.diagnostic.Error: <unknown>:';
-			var handleLength = errorHandle.length;
-			var bufferStr = Buffer.concat(chunks).toString('utf-8').trim();
-			console.log(bufferStr);
-			var split = bufferStr.slice(bufferStr.search(errorHandle) + handleLength).split(/:|-/);
-			if (split.length < 4) {
-				// No syntactic error found <-- TODO: TEST
-				console.log('No syntactic error!');
-				obj.runningCode = code;
-				return cb();
-			}
-			console.log('Yes syntactic error!');
-			var startLineNo = split[0];
-			var endLineNo = split[2];
-			var startColNo = split[1];
-			var endColNo = split[3];
+			var bufferStr = Buffer.concat(stdoutChunks).toString('utf-8').trim();
+			var jsonObj = JSON.parse(bufferStr);
 
-			obj.syntaxErrorRanges.push({start: {row: startLineNo, col: startColNo}, end: {row: endLineNo, col: endColNo}});
-			*/
-
-			var errorHandle = 'File "<stdin>", line ';
-			var handleLength = errorHandle.length;
-			var bufferStr = Buffer.concat(chunks).toString('utf-8').trim();
-			console.log(bufferStr);
-			var start = bufferStr.search(errorHandle)
-			if (start < 0) {
-				// No syntax error
-				console.log('No syntactic error!');
-				obj.runningCode = code;
-				return cb();
+			// If there was a pars error, perform commenting recursively until
+			// the error is gone
+			if (jsonObj.type === 'parse_error') {
+				var start = jsonObj.loc.start;
+				var end = jsonObj.loc.end;
+				var errorLoc = {start:{row:start.line-1,column:start.column},end:{row:end.line-1,column:end.column}};
+				var processedCodeObj = commentThisLineAndLower(obj.code, errorLoc.start.row);
+				obj.code = processedCodeObj.code;
+				obj.syntaxErrorRanges.push(errorLoc);
+				obj.commentRanges.push(processedCodeObj.range);
+				return commentErrorLines(obj, cb);
 			}
 
-			console.log('Yes syntactic error!');
-			var lineNo = parseInt(bufferStr.slice(start + handleLength).split(/\s/)[0]);
+			// At the point, there is no parse error in the code, 
+			// find all the comment ranges and
+			// see if there are any other leftover statements in the containing
+			// function that hasn't been commented out. In this pass, we 
+			// also comment out the function signature line(s) as well as the 
+			// deliberately inserted last pass statement.
+			var functionRanges = parser.findFunctionRanges(jsonObj);
+			functionRanges.forEach((range, i) => {
+				var j = 0;
+				while (obj.commentRanges.length > j) {
+					if (overlaps(obj.commentRanges[j], range)) {
+						obj.commentedFuncRanges.push(range);
+						obj.commentRanges.splice(j, 1);
+						obj.code = commentFromTo(obj.code, range.start.row, range.end.row);
+					} else {
+						j++;
+					}
+				}
+			});
 
-			if (isNaN(lineNo)) {
-				// Line number parse error
-				return cb();
-			}
-
-			obj.syntaxErrorRanges.push({start: {row: lineNo, col: 0}, end: {row: lineNo, col: 0}});
-			var newCode = commentContainingFunctionBody(code, lineNo);
-			commentErrorLines(newCode, obj, cb);
+			obj.obj = jsonObj;
+			return cb();
 		});
-		return runningCode;
+		// Error stdout did not end
 	}
 
 	function findUser(users, userName) {
@@ -220,6 +319,41 @@ module.exports = function(io, db) {
 		}
 	});
 
+	function runTest(lang, execFilePath, pickleFilePath, code, results, cp, cp_idx, testcase, case_idx, cb) {
+		var execProcess = cprocess.spawn(lang, [execFilePath, pickleFilePath, cp.name, case_idx, code]);
+		var errChunks = [];
+		var resultChunks = [];
+
+		execProcess.stderr.on('data', (chunk) => {
+			errChunks.push(chunk);
+		});
+
+		execProcess.stdout.on('data', (chunk) => {
+			resultChunks.push(chunk);
+		});
+
+		execProcess.stdout.on('end', () => {
+			// TODO: You can maybe compress this for a single testcase run
+			if (!results[cp_idx]) results[cp_idx] = [];
+			if (!results[cp_idx][case_idx]) results[cp_idx][case_idx] = [];
+			var traceObj = JSON.parse(Buffer.concat(resultChunks).toString('utf-8').trim())["opt_trace"];
+			if (traceObj.length === 0) {
+				// Function did not exist and nothing was output
+				// <-- this is PythonTutor backend's behavior
+				results[cp_idx][case_idx].push([
+					{
+						"event": "exception",
+						"exception_msg": "Function Definition Nonexistent"
+					}
+				]);
+			} else {
+				results[cp_idx][case_idx].push(traceObj);
+			}
+
+			cb();
+		});
+	}
+
 	router.post('/:labID', (req, res, next) => {
 		var body = req.body;
 		var labID = req.params.labID;
@@ -250,13 +384,10 @@ module.exports = function(io, db) {
 			});
 
 			return;
-		} else if (command === "runAllTests") {
-			////////////////////////////
-			// Run all the test cases
-			////////////////////////////
-			var lang = body.language;
-			var execFilePath = './public/python/PythonTutor/doctest_exec.py';
-
+		} else if (command === "runAllTests" || command === "runTest") {
+			////////////////////////////////////////////
+			// Run all test cases or a single test case
+			////////////////////////////////////////////
 			db.find({labID: labID}, (err, docs) => {
 				if (err) {
 					return console.error(err);
@@ -266,67 +397,114 @@ module.exports = function(io, db) {
 					return console.log("Lab ID not uniquified");
 				}
 
-				var code = body.code;
-				var fixObj = {runningCode: '', syntaxErrorRanges: []};
-				commentErrorLines(code, fixObj, () => {
-					var pickleFilePath = docs[0].pickleFilePath;
+				var fixObj = {code: body.code, syntaxErrorRanges: [], commentRanges: [], commentedFuncRanges: []};
+				var lang = body.language;
+				var execFilePath = './public/python/PythonTutor/doctest_exec.py';
+				var pickleFilePath = docs[0].pickleFilePath;
+
+				commentErrorLines(fixObj, () => {
 					var results = [];
-					var count = 0;
-					var numToDo = 0;
-					docs[0].labDoc.checkpoints.forEach((cp, cp_idx) => {
-						numToDo += cp.testCases.length;
-						cp.testCases.forEach((testcase, case_idx) => {
-							// Test the code and comment out parts that return syntactic errors
-							var runningCode = fixObj.runningCode;
-							var syntaxErrorRanges = fixObj.syntaxErrorRanges;
-
-							var execProcess = cprocess.spawn(lang, [execFilePath, pickleFilePath, cp.name, case_idx, runningCode]);
-							var errChunks = [];
-							var resultChunks = [];
-
-							execProcess.stderr.on('data', (chunk) => {
-								errChunks.push(chunk);
+					// Test the code and comment out parts that return syntactic errors
+					var runningCode = fixObj.code;
+					var syntaxErrorRanges = fixObj.syntaxErrorRanges;
+					var commentedFuncRanges = fixObj.commentedFuncRanges;
+					if (command === "runAllTests") {
+						var count = 0;
+						var numToDo = 0;
+						docs[0].labDoc.checkpoints.forEach((cp, cp_idx) => {
+							numToDo += cp.testCases.length;
+							cp.testCases.forEach((testcase, case_idx) => {
+								runTest(lang, execFilePath, pickleFilePath, runningCode, results, cp, cp_idx, testcase, case_idx, () => {
+									count += 1;
+									if (count === numToDo) {
+										console.log(results);
+										return res.status(200).send(
+											{
+												results: results,
+												runningCode: runningCode,
+												syntaxErrorRanges: syntaxErrorRanges,
+												commentedFuncRanges: commentedFuncRanges
+											}
+										);
+									}									
+								});
 							});
-
-							execProcess.stdout.on('data', (chunk) => {
-								resultChunks.push(chunk);
-							});
-
-							execProcess.stdout.on('end', () => {
-								if (!results[cp_idx]) results[cp_idx] = [];
-								if (!results[cp_idx][case_idx]) results[cp_idx][case_idx] = [];
-								var trace = JSON.parse(Buffer.concat(resultChunks).toString('utf-8').trim())["opt_trace"];
-								results[cp_idx][case_idx].push(trace);
-								count += 1;
-								if (count === numToDo) {
-									res.status(200).send({results: results, runningCode: runningCode, syntaxErrorRanges: syntaxErrorRanges});
+						});						
+					} else if (command === "runTest") {
+						var cp_idx = body.checkpoint;
+						var cp = docs[0].labDoc.checkpoints[cp_idx];
+						var case_idx = body.testcase;
+						var testcase = cp.testCases[body.case_idx];
+						runTest(lang, execFilePath, pickleFilePath, runningCode, results, cp, cp_idx, testcase, case_idx, () => {
+							return res.status(200).send(
+								{
+									results: results,
+									runningCode: runningCode,
+									syntaxErrorRanges: syntaxErrorRanges,
+									commentedFuncRanges: commentedFuncRanges
 								}
-							});
+							);							
 						});
-					});
-				}, true);
+					}
+				});
+			});
+		} else if (command === "fuzzySelect") {
+			var selectedStr = body.str;
+			var selectedLoc = body.loc;
+			var code = body.code;
+
+			const pyprocess = cprocess.spawn('python', ['./public/python/parse_python_to_json.py', code]);
+
+			// execute the code
+			const stdoutChunks = [];
+			const errorChunks = [];
+
+			pyprocess.stderr.on('data', (chunk) => {
+				errorChunks.push(chunk);
+			});
+
+			pyprocess.stdout.on('data', function(chunk) {
+				stdoutChunks.push(chunk);
+			});
+
+			pyprocess.stdout.on('end', () => {
+				var bufferStr = Buffer.concat(stdoutChunks).toString('utf-8').trim();
+				var jsonObj = JSON.parse(bufferStr);
+
+				var functionRanges = parser.findFunctionRanges(jsonObj);
+
+				var extendedSelections = [];
+				functionRanges.forEach((range, i) => {
+					// TODO: Instead of a simple overlaps() function, we need to
+					//       know whether the selected location touches any node
+					//       that will be present in the debug result
+					if (overlaps(range, selectedLoc)) {
+						extendedSelections.push(range);
+					}
+				});
+
+				res.status(200).send({originalSelectionRange: selectedLoc, extendedSelectionRanges: extendedSelections});
 			});
 		} else if (command === "debug") {
 			var code = body.code;
 			var lang = body.language;
 
-			var s = new stream.Readable();
-
 			var traceProcess = cprocess.spawn('python', ['./public/python/PythonTutor/generate_json_trace.py', '--code', code]);
 			// execute the code
-			var chunks = [];
+			var errChunks = [];
+			var stdoutChunks = [];
 
-			protraceProcesscess.stderr.on('data', (chunk) => {
-				chunks.push(chunk);
+			traceProcess.stderr.on('data', (chunk) => {
+				errChunks.push(chunk);
 			});
 
 			traceProcess.stdout.on('data', (chunk) => {
-				chunks.push(chunk);
+				stdoutChunks.push(chunk);
 			});
 
 			traceProcess.stdout.on('end', () => {
 				// JSON trace is generated
-				res.status(200).send(Buffer.concat(chunks));
+				res.status(200).send(Buffer.concat(stdoutChunks).toString('utf-8').trim());
 			});
 
 			return;
@@ -383,15 +561,17 @@ module.exports = function(io, db) {
 				}
 			});
 		} else if (command === "signup") {
-			console.log('in1');
 			db.find({ labID: labID }, (err, docs) => {
 				if (err) {
-					console.log(err);
-					res.sendStatus(500);
+					console.error(err);
+					return res.status(500).render('error',
+					{
+						title: 'Labyrinth - ' + labID,
+						errorMsg: 'System Error'
+					});
 				} else {
 					if (docs.length !== 1) {
-						console.log("Error, lab doc is not uniquified by labID");
-						res.render('error',
+						return res.render('error',
 						{
 							title: 'Labyrinth - ' + labID,
 							errorMsg: "Something went wrong ... Please check the lab ID and the URL"
@@ -400,6 +580,8 @@ module.exports = function(io, db) {
 						var userName = body.userName;
 						var userInDB = docs[0].users[findUser(docs[0].users, userName)];
 						if (!userInDB) {
+							console.log('new user signed up. Skeleton code:');
+							console.log(docs[0].labDoc.skeletonCode);
 							var newUser = {
 								userName: userName,
 								password: body.password,
@@ -460,19 +642,20 @@ module.exports = function(io, db) {
 			var userName = body.userName;
 			db.find({labID: labID}, (err, docs) => {
 				if (err) {
-					console.log(err);
-					res.status(500).send('DB find operation error');
-					return;
+					console.error(err);
+					return res.status(500).render('error',
+					{
+						title: 'Labyrinth - ' + labID,
+						errorMsg: 'DB find error'
+					});
 				}
 
 				if (docs.length !== 1) {
-					console.log("Error, lab doc is not uniquified by labID");
-					res.status(500).render('error',
+					return res.status(500).render('error',
 					{
 						title: 'Labyrinth - ' + labID,
-						errorMsg: "Something went wrong ... Please check the lab ID and the URL"
+						errorMsg: 'Something went wrong ... Please check the lab ID and the URL'
 					});
-					return;
 				}
 
 				var userInDB = docs[0].users[findUser(docs[0].users, userName)];
@@ -496,6 +679,9 @@ module.exports = function(io, db) {
 					if (docs.length !== 1) {
 						return console.log("Error, lab doc is not uniquified by labID");
 					} else {
+						///////////////////////////////
+						// Save the new code in the DB
+						///////////////////////////////
 						var userName = body.userName;
 						var userIdx = findUser(docs[0].users, userName);
 						if (userIdx < 0) {
@@ -509,7 +695,17 @@ module.exports = function(io, db) {
 						var userQueryObj = {};
 						userQueryObj[userQueryStr] = newUserObj;
 						db.update({labID: labID}, {$set: userQueryObj}, {}, () => {});
-						return res.status(200).send({ok: true});
+
+						/////////////////////////////////////
+						// Extract syntactic errors (if any)
+						/////////////////////////////////////
+						var fixObj = {code: body.code, syntaxErrorRanges: [], commentRanges: [], commentedFuncRanges: []};
+						commentErrorLines(fixObj, () => {
+							// Test the code and comment out parts that return syntactic errors
+							var syntaxErrorRanges = fixObj.syntaxErrorRanges;
+							var commentedFuncRanges = fixObj.commentedFuncRanges;
+							return res.status(200).send({syntaxErrorRanges: syntaxErrorRanges, commentedFuncRanges: commentedFuncRanges});
+						});
 					}
 				}
 			});

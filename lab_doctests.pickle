@@ -13,7 +13,7 @@ S'\n\n# My first Labyrinth lab\n\nThis is the lab description -- write whatever 
 p6
 sS'filename'
 p7
-S'./labs/test10\\lab.py'
+S'./labs/test2\\lab.py'
 p8
 sS'lineno'
 p9

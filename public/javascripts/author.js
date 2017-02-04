@@ -18,7 +18,6 @@ class AuthorController {
 		this.labID = '';
 		this.labDescHTML = '';
 		this.checkpoints = [];
-		this.skeletonCode = '';
 
 		// Editor related
 		this.editor = null;
@@ -28,43 +27,23 @@ class AuthorController {
 		this.loadFileInput = $('#loadFileInput');
 		this.saveBtn = $('#saveBtn');
 
-		/*
-		// Console related
-		this.console = $('#console');
-		this.consoleObj = null;
-		this.consoleClear = $('#console-clear');
-
-		// Debugger related
-		this.debuggerViewDiv = $('#debugger-view-div');
-		this.debuggerRangeSlider = $('#debugger-range-slider');
-		this.debuggerRangeSliderSpan = $('#debugger-range-slider-span');
-		this.debugTraces = [];
-		this.debugStr = '';
-		*/
-
 		// Lab doc panel
 		this.labDoc = $('#lab-doc');
 
 		this.init();
 	}
 
-	setStatus(labID) {
-		this.labID = labID;
-	}
-
 	init() {
 		this.addModalHandlers();
 		this.addBtnHandlers();
 		this.initEditor();
-		//this.initConsole();
-		//this.initDebugger();
 	}
 
-	get code() {
+	getCode() {
 		return this.editor.getSession().getValue();
 	}
 
-	set code(value) {
+	setCode(value) {
 		this.editor.setValue(value);
 	}
 
@@ -73,73 +52,6 @@ class AuthorController {
 		this.editor.getSession().setMode('ace/mode/python');
 		this.editor.setShowPrintMargin(false); // vertical line at char 80
 		this.editor.$blockScrolling = Infinity; // remove scrolling warnings
-	}
-
-	// TODO: dup from controller.js
-	startConsole() {
-		var startPrompt = () => {
-			this.consoleObj.Prompt(true, (input) => {
-				// TODO: dedup
-				var URL = LAB_URL + '/' + LAB_ID;
-				var dataObj = {
-					command: RUN_COMMAND,
-					code: input,
-					language: LAB_LANG
-				};
-				$.post({
-					url: URL,
-					data: JSON.stringify(dataObj),
-					success: (data) => {
-						var res = data.toString('utf-8').trim();
-						this.consoleObj.Write(res + '\n', 'jqconsole-output');
-					},
-					error: (req, status, err) => {
-						console.log(err);
-					},
-					dataType: "text",
-					contentType: 'application/json'
-				});
-				startPrompt();
-			});
-		};
-		startPrompt();		
-	}
-
-	// TODO: dup from controller.js
-	initConsole() {
-		this.consoleObj = this.console.jqconsole('', '>>>');
-		this.startConsole();
-		this.consoleClear.on("click", (e) => {
-			e.preventDefault();
-			this.consoleObj.Reset();
-			this.startConsole();
-		});
-	}
-
-	// TODO: dup from controller.js
-	createDebuggerSpanText(val, max) {
-		return 'Execution step ' + val + ' out of ' + max;
-	}
-
-	// TODO: dup from controller.js
-	initDebugger() {
-		this.debuggerRangeSlider.slider({
-			range: 'max',
-			min: 0,
-			max: 0,
-			value: 0
-		});
-
-		this.debuggerRangeSlider.on('slide', (event, ui) => {
-			this.debuggerRangeSliderSpan.text(
-				this.createDebuggerSpanText(ui.value, this.debuggerRangeSlider.slider('option', 'max'))
-			);
-			this.debuggerViewDiv.html(this.debugTraces[ui.value - 1]);
-		});
-
-		this.debuggerRangeSliderSpan.text(
-			this.createDebuggerSpanText(0, 0)
-		);
 	}
 
 	addBtnHandlers() {
@@ -172,13 +84,12 @@ class AuthorController {
 						this.labDoc.append(cp.testCaseHTML);
 					});
 				}
-				this.code = data.skeleton;
-				this.skeletonCode = this.code;
+				this.setCode(data.skeleton);
 			},
 			error: (req, status, err) => {
 				console.log(err);
 			},
-			dataType: "json",
+			dataType: 'json',
 			contentType: 'application/json'
 		});
 	}
@@ -206,12 +117,13 @@ class AuthorController {
 			// Save the lab material and maybe announce (send a notification) to students
 			var lab = {
 				labDescHTML: this.labDescHTML,
-				skeletonCode: this.skeletonCode,
+				skeletonCode: this.getCode(),
 				checkpoints: this.checkpoints,
-			}
+			};
 
 			var request = {
 				labID: LAB_ID,
+				userName: USER_NAME,
 				command: SAVE_AND_PUBLISH_COMMAND,
 				doc: lab
 			};
@@ -259,7 +171,8 @@ class AuthorController {
 						if (data.ok) {
 							this.labIDModalDiv.css('display', 'none');
 							this.signupModalDiv.fadeIn();
-							this.setStatus(labID);
+							this.labID = labID; // We need this b/c we're not changing the URL yet
+												// and the signup modal handler needs this information
 						} else {
 							this.labIDModalStatus.html(data.reason);
 						}

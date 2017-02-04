@@ -31,7 +31,6 @@ table, tr, td, th, td {
 .left-pane {
 	position: absolute;
     left: 10px;
-    right: 10px;
     bottom: 10px;
     width: ~"calc(50vw - 10px)";
 }
@@ -94,7 +93,7 @@ table, tr, td, th, td {
 }
 
 /* Small height screens */
-@media screen and (min-height: 400px), screen and (max-height: 550px) {
+@media screen and (min-height: 200px), screen and (max-height: 550px) {
     .code-editor {
         .right-pane;
         top: 0;
@@ -128,74 +127,28 @@ table, tr, td, th, td {
     #debuggerViewDiv {
         display: none;
         .right-pane;
-        top: ~"calc(100vh - 155px)";
-        height: 130px;
+        top: ~"calc(100vh - 165px)";
         left: ~"calc(50vw + 5px)";
-        right: 5px;
-        width: ~"calc(50vw - 10px)";
+        width: ~"calc(50vw - 5px)";
+        height: 110px;
         overflow-y: scroll;
     }
     #debuggerRangeSlider {
         display: none;
         .right-pane;
-        top: ~"calc(100vh - 25px)";
+        top: ~"calc(100vh - 35px)";
         left: ~"calc(50vw + 5px)";
-        right: 5px;
-        width: ~"calc(50vw - 10px)";
+        width: ~"calc(50vw - 20px)";
         height: 10px;
     }
     #debuggerRangeSliderSpan {
         display: none;
         .right-pane;
-        top: ~"calc(100vh - 10px)";
-        left: ~"calc(50vw + 5px)";
-        right: 5px;
-        width: ~"calc(50vw - 10px)";
-        height: 10px;
-    }
-    /* Author view */
-    /*
-    .author-code-editor {
-        .whole-pane;
-        top: 60px;
-        bottom: 175px;
-        height: ~"calc(100vh - 205px)";
-    }
-    .author-code-button {
-        .whole-pane;
-        top: ~"calc(100vh - 185px - 10px + 60px)";
-        height: 20px;
-    }
-    .author-console {
-        .whole-pane;
-        top: ~"calc(100vh - 155px)";
-        height: 145px;
-    }
-    .author-console-clear {
-        .whole-pane;
-        top: ~"calc(100vh - 10px)";
-        height: 10px;
-    }
-    .author-debuggerViewDiv {
-        .whole-pane;
-        display: none;
-        top: ~"calc(100vh - 155px)";
-        height: 130px;
-        overflow-y: scroll;
-    }
-    .author-debuggerRangeSlider {
-        .whole-pane;
-        display: none;
         top: ~"calc(100vh - 25px)";
+        left: ~"calc(50vw + 5px)";
+        width: ~"calc(50vw - 20px)";
         height: 10px;
     }
-    .author-debuggerRangeSliderSpan {
-        .whole-pane;
-        display: none;
-        top: ~"calc(100vh - 10px)";
-        height: 10px;
-    }
-    */
 }
 
 /* Large height screens */
@@ -234,73 +187,27 @@ table, tr, td, th, td {
         display: none;
         .right-pane;
         top: ~"calc(100vh - 200px)";
-        height: 155px;
         left: ~"calc(50vw + 5px)";
-        right: 5px;
-        width: ~"calc(50vw - 10px)";
+        width: ~"calc(50vw - 5px)";
+        height: 145px;
         overflow-y: scroll;
     }
     #debugger-range-slider {
         display: none;
         .right-pane;
-        top: ~"calc(100vh - 25px)";
-        left: ~"calc(50vw + 5px)";
-        right: 5px;
-        width: ~"calc(50vw - 10px)";
+        top: ~"calc(100vh - 35px)";
+        left: ~"calc(50vw + 10px)";
+        width: ~"calc(50vw - 20px)";
         height: 10px;
     }
     #debugger-range-slider-span {
         display: none;
         .right-pane;
-        top: ~"calc(100vh - 10px)";
-        left: ~"calc(50vw + 5px)";
-        right: 5px;
-        width: ~"calc(50vw - 10px)";
-        height: 10px;
-    }
-    /* Author view */
-    /*
-    .author-code-editor {
-        .whole-pane;
-        top: 60px;
-        bottom: 220px;
-        height: ~"calc(100vh - 310px)";
-    }
-    .author-code-button {
-        .whole-pane;
-        top: ~"calc(100vh - 230px - 15px)";
-        height: 20px;
-    }
-    .author-console {
-        .whole-pane;
-        top: ~"calc(100vh - 210px)";
-        height: 180px;
-    }
-    .author-console-clear {
-        .whole-pane;
-        top: ~"calc(100vh - 30px)";
-        height: 10px;
-    }
-    .author-debugger-view-div {
-        .whole-pane;
-        display: none;
-        top: ~"calc(100vh - 200px)";
-        height: 155px;
-        overflow-y: scroll;
-    }
-    .author-debugger-range-slider {
-        .whole-pane;
-        display: none;
         top: ~"calc(100vh - 25px)";
+        left: ~"calc(50vw + 10px)";
+        width: ~"calc(50vw - 20px)";
         height: 10px;
     }
-    .author-debugger-range-slider-span {
-        .whole-pane;
-        display: none;
-        top: ~"calc(100vh - 10px)";
-        height: 10px;
-    }
-    */
 }
 
 .checkpoint-status-img img, .checkpoint-status-img div {
@@ -309,8 +216,7 @@ table, tr, td, th, td {
 	padding-right: 5px;
 }
 
-/* Modal for questioning */
-/* Background */
+/* Question Modal */
 .question-modal {
     display: none; /* Hidden by default */
     position: fixed; /* Stay in place */
@@ -325,7 +231,6 @@ table, tr, td, th, td {
     background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
 }
 
-/* Modal Content */
 .question-modal-content {
     background-color: #fefefe;
     margin: auto;
@@ -344,6 +249,44 @@ table, tr, td, th, td {
 
 .question-modal-close:hover,
 .question-modal-close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Debug Modal */
+.debug-modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 100; /* Sit on top */
+    padding-top: 100px; /* Location of the box */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+.debug-modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+}
+
+/* The Close Button */
+.debug-modal-close {
+    color: #aaaaaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.debug-modal-close:hover,
+.debug-modal-close:focus {
     color: #000;
     text-decoration: none;
     cursor: pointer;
@@ -545,7 +488,21 @@ table, tr, td, th, td {
 .highlight { background-color: yellow }
 
 /* Ace editor gutter style */
-.redMarker,.redGutter {
+.redMarker, .redGutter {
   /*background-color: #ffecec;*/ /* from GitHub diffs */
   background-color: #ffbbbb; /* a wee bit darker, from GitHub */
+}
+
+.greyMarker, .greyGutter {
+  background-color: rgb(160,160,160); /* a wee bit darker, from GitHub */
+}
+
+/* Syntax error highlight Ace editor */
+.syntaxErrorHighlight {
+    /* Must be after background definitions */
+    /* background-size: 4px 4px; */
+    border-bottom: 1px solid red;
+    position: absolute;
+    cursor: pointer !important;
+    pointer-events: auto;
 }

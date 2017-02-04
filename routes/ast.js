@@ -35,7 +35,7 @@ module.exports = function ast(db) {
 			}
 			cb();
 		});
-	}
+	};
 
 	this.findRelevantUsers = function(users, qstrCode, questionObjToModify, cb) {
 		var targets = [];
@@ -62,5 +62,5 @@ module.exports = function ast(db) {
 				cb();
 			}
 		);
-	}
-}
+	};
+};

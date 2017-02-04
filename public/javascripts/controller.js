@@ -1,5 +1,7 @@
 "use strict";
 
+var Range = ace.require('ace/range').Range;
+
 class TestCase {
 	constructor(input, output) {
 		this.test = {
@@ -66,7 +68,7 @@ class Checkpoint {
 
 class EditorObj {
 	constructor() {
-		this.editor = ace.edit("editor"); // takes time
+		this.editor = ace.edit("editor"); // takes time?
 		//this.editor.setTheme("ace/theme/terminal");
 		this.editor.getSession().setMode("ace/mode/python");
 		this.editor.setShowPrintMargin(false); // vertical line at char 80
@@ -88,8 +90,8 @@ class Lab {
 		this.checkpoints = []; // Array of checkpoints
 		this.questionBtns = []; // Question Buttons
 
-		// Test Case Spans
-		this.testCaseSpans = [];
+		// Testcase HTML Div (for highlighting)
+		this.prevTestcaseHTMLDiv = null;
 
 		// Notification modal
 		this.questionNotificationModal = $('#question-notification-modal');
@@ -111,6 +113,14 @@ class Lab {
 		this.warningNotificationModalContent = $('#warning-notification-modal-content');
 		this.warningNotificationModalText = $('#warning-notification-modal-text');
 
+		// Debug modal
+		this.debugModal = $('#debug-modal');
+		this.debugModalClose = $('#debug-modal-close');
+		this.debugModalContent = $('#debug-modal-content');
+		this.debugModalCodeDiv = $('#debug-modal-code-div')
+		this.debugModalStatus = $('#debug-modal-status');
+		this.debugModalOkBtn = $('#debug-modal-ok-btn');
+
 		// Login and signup modals
 		this.loginModal = $('#login-modal');
 		this.loginModalLoginInput = $('#user-name-login-input');
@@ -126,6 +136,12 @@ class Lab {
 		this.signupModalDiv = $('#signup-modal-content');
 		this.signupLink = $('#signup-link');
 		this.loginLink = $('#login-link');
+
+		// Sign out
+		this.signoutBtn = $('#sign-out');
+
+		// Question Modal
+		this.questionModal = null;
 
 		// Code Editor Control Buttons
 		this.runAllTestsBtn = $('#runAllTestsBtn');
@@ -148,6 +164,7 @@ class Lab {
 		this.debuggerRangeSliderSpan = $('#debugger-range-slider-span');
 		this.debugTraces = [];
 		this.debugStr = '';
+		this.debugStrLoc = {};
 
 		// Logged-in user data
 		this.userData = {};
@@ -157,10 +174,12 @@ class Lab {
 		this.runningCode = '';
 		this.syntaxErrorRanges = null;
 		this.prevSyntaxErrorRanges = [];
+		this.prevCommentRows = [];
+		this.prevErrorMarkers = [];
 
 		// Context menu
-		this.contextMenu = null;
-		this.contextMenuPos = null;
+		this.contextMenuWithDebug = null;
+		this.contextMenuWithDebugHighlight = null;
 		this.windowWidth = -1;
 		this.windowHeight = -1;
 		this.clickCoords = null;
@@ -168,12 +187,28 @@ class Lab {
 		this.clickCoordsY = -1;
 
 		this.isContextMenuVisible = false;
+		this.isDebugStrHighlighted = false;
 		this.activeClassName = "context-menu--active";
+		// With debugging
 		this.debugMenuID = "menu-debug";
+		this.visualDebugMenuID = "menu-visual-debug";
+		this.debugHighlightMenuID = "menu-debug-highlight";
+		this.debugDehighlightMenuID = "menu-debug-dehighlight";
+		this.runTestcaseID = "menu-run";
+		this.viewHintMenuIDDebug = "menu-view-a-hint-debug";
+		this.askQuestionMenuIDDebug = "menu-ask-a-question-debug";
+		// Without debugging
 		this.viewHintMenuID = "menu-view-a-hint";
 		this.askQuestionMenuID = "menu-ask-a-question";
 
-		this.questionModal = null; // Question Modal
+		this.menuClickID = {checkpoint: -1, testcase: -1};
+
+		// Debouncing and code auto save
+		this.dmp = new diff_match_patch();
+		this.DEBOUNCE_MS = 3000;// milliseconds of debouncing (i.e., 'clustering' a
+								// rapid series of edit actions as a single diff)
+								// set to 'null' for no debouncing
+		this.curText = '';
 
 		this.init();
 	}
@@ -190,22 +225,26 @@ class Lab {
 	init() {
 		this.collectQuestionBtns();
 		this.collectTestCaseSpans();
+		this.collectQuestionModal();
 
 		this.addModalHandlers();
 		this.addBtnHandlers();
 
+		// Add notification handlers
 		this.addQuestionNotificationHandler();
 		this.addAnswerNotificationHandler();
 
 		// Context menu handler
 		this.collectContextMenu();
-		this.collectQuestionModal();
 		this.addContextListener();
 		this.addKeyUpListner();
-		this.addQusetionModalHandler();
 
+		// Initialize other panels
 		this.initConsole();
 		this.initDebugger();
+
+		// Debouncing and auto code save + syntax error visualization
+		this.addContentChangeHandler();
 
 		// Initialize the user status
 		this.initStatus();
@@ -239,7 +278,7 @@ class Lab {
 		this.warningNotificationModalText.html('<p>' + content + '</p>');        
 		setTimeout(() => {
 			this.warningNotificationModal.fadeOut();
-		}, 6000);
+		}, 2000);
 	}
 
 	notificationModalHandler() {
@@ -296,6 +335,7 @@ class Lab {
 						error: (req, status, err) => {
 							console.log(err);
 						},
+						dataType: 'json',
 						contentType: 'application/json'
 					});
 				} else {
@@ -331,7 +371,7 @@ class Lab {
 							error: (req, status, err) => {
 								console.log(err);
 							},
-							dataType: "json",
+							dataType: 'json',
 							contentType: 'application/json'
 						}); 
 					} else {
@@ -366,73 +406,285 @@ class Lab {
 		});
 	}
 
+	showQuestionModal(codeStr) {
+		if (codeStr === '') {
+			this.questionModal.questionModalCode.css('display', 'none');
+			var selectCodeBlockFirstMsg = 'To add a code block that you are confused about,\
+										   simply select the relevant portion of your code\
+										   before asking a question';
+			this.questionModal.questionModalStatus.text(selectCodeBlockFirstMsg);
+		} else {
+			this.questionModal.questionModalCode.css('display', 'block');
+			this.questionModal.questionModalCode.text(codeStr);
+		}
+		this.questionModal.questionModal.css('display', 'block');
+	}
+
+	hideQuestionModal() {
+		this.questionModal.questionModal.css('display', 'none');
+	}
+
+	showDebugModal() {
+		this.debugModal.css('display', 'block');
+	}
+
+	hideDebugModal() {
+		this.debugModal.css('display', 'none');
+	}
+
+	showDebugHighlightMenu() {
+		$('#' + this.debugHighlightMenuID).css('display', 'block');
+	}
+
+	hideDebugHighlightMenu() {
+		$('#' + this.debugHighlightMenuID).css('display', 'none');
+	}
+
+	showDebugDehighlightMenu() {
+		$('#' + this.debugDehighlightMenuID).css('display', 'block');
+	}
+
+	hideDebugDehighlightMenu() {
+		$('#' + this.debugDehighlightMenuID).css('display', 'none');
+	}
+
 	addModalBackgroundClickHandler() {
 		/* Dismiss the question modal when the background is clicked */
 		// TODO: TEST
 		window.onclick = (e) => {
-			var qModal = this.questionModal;
-			if (e.target.id === qModal.questionModal.attr('id')) {
-				qModal.questionModal.css('display', 'none');
+			if (e.target.id === this.questionModal.questionModal.attr('id')) {
+				// Hide the question modal
+				this.hideQuestionModal();
+			} else if (e.target.id === this.debugModal.attr('id')) {	
+				// Hide the debug modal
+				this.hideDebugModal();
 			}
 		};
 	}
 
+	////////////////////////////////////
+	// Highlight all the syntax errors
+	////////////////////////////////////
 	highlightSyntaxErrors(errorRanges) {
-		////////////////////////////////////
-		// Highlight all the syntax errors
-		////////////////////////////////////
 		var errorIndicationStyle = 'redGutter';
+		// Remove previous gutter highlights (squiggly lines are removed when the editor content is changed)
 		this.prevSyntaxErrorRanges.forEach((range, idx) => {
-			this.editor.session.removeGutterDecoration(range.start.row-1, errorIndicationStyle);
+			this.editor.session.removeGutterDecoration(range.start.row, errorIndicationStyle);
+		});
+		// Add new gutter highlights and squiggly lines
+		errorRanges.forEach((range, idx) => {
+			this.editor.session.addGutterDecoration(range.start.row, errorIndicationStyle);
+			this.prevErrorMarkers.push(
+				{
+					id: this.editor.session.addMarker(
+						new Range(range.start.row, range.start.column, range.end.row, range.end.column),
+						"syntaxErrorHighlight",
+						"text"),
+					startLine: range.start.row,
+					endLine: range.end.row
+				});
 		});
 
-		this.syntaxErrorRanges.forEach((range, idx) => {
-			this.editor.session.addGutterDecoration(range.start.row-1, errorIndicationStyle);
-		});
-
-		this.prevSyntaxErrorRanges = this.syntaxErrorRanges;
+		this.prevSyntaxErrorRanges = errorRanges;
 	}
 
-	addRunAllTestsBtnHandler() {
-		////////////////////////////
-		// Run all the test cases
-		////////////////////////////
-		this.runAllTestsBtn.on('click', (e) => {
-			// Show the console
-			this.console.attr("style", "display: block;");
-			this.consoleClear.attr("style", "display: block;");
-			this.debuggerViewDiv.attr("style", "display: none;");
-			this.debuggerRangeSlider.attr("style", "display: none;");
-			this.debuggerRangeSliderSpan.attr("style", "display: none;");
+	///////////////////////////////////////////////////
+	// Highlight the gutter of the commented function
+	// lines in grey to indicate that these functions
+	// are not executed
+	///////////////////////////////////////////////////
+	colorCommentedOutFunctions(commentedFuncRanges) {
+		var commentIndicationStyle = 'greyGutter';
+		// Remove previous gutter highlights
+		this.prevCommentRows.forEach((row, idx) => {
+			this.editor.session.removeGutterDecoration(row, commentIndicationStyle);
+		});
 
-			// arrow function lets 'this' to be looked up in the lexical scope
-			var URL = LAB_URL + '/' + LAB_ID;
-			var dataObj = {
-				command: RUN_ALL_TESTS_COMMAND,
-				code: this.editorObj.code,
-				language: LAB_LANG
-			};
+		// Unroll the comment function ranges into row indices
+		var commentRows = [];
+		commentedFuncRanges.forEach((range, idx) => {
+			for (let i = range.start.row; i <= range.end.row; ++i) {
+				commentRows.push(i);
+			}
+		});
 
-			this.editorStatus.html("Runnig tests ... ");
-			this.editorStatus.css('display', 'inline');
-			$.post({
-				url: URL,
-				data: JSON.stringify(dataObj),
-				success: (data) => {
-					this.editorStatus.html("Done");
-					setTimeout(() => {
-						this.editorStatus.fadeOut();
-					}, 2000);
+		// Unroll the previous syntax error ranges into row indices
+		var prevSyntaxErrorRows = [];
+		this.prevSyntaxErrorRanges.forEach((sRange, idx) => {
+			prevSyntaxErrorRows.push(sRange.start.row);
+		});
 
-					var json = JSON.parse(data);
-					this.runningCode = json.runningCode;
-					this.syntaxErrorRanges = json.syntaxErrorRanges;
+		for (let i = 0; i < commentRows.length;) {
+			if (prevSyntaxErrorRows.indexOf(commentRows[i]) > -1) {
+				commentRows.splice(i, 1);
+			} else {
+				i++;
+			}
+		}
+
+		commentRows.forEach((row, idx) => {
+			this.editor.session.addGutterDecoration(row, commentIndicationStyle);
+		});
+
+		this.prevCommentRows = commentRows;
+	}
+
+	showConsole() {
+		this.console.attr("style", "display: block;");
+		this.consoleClear.attr("style", "display: block;");
+		this.debuggerViewDiv.attr("style", "display: none;");
+		this.debuggerRangeSlider.attr("style", "display: none;");
+		this.debuggerRangeSliderSpan.attr("style", "display: none;");		
+	}
+
+	showDebugger() {
+		this.console.attr("style", "display: none;");
+		this.consoleClear.attr("style", "display: none;");
+		this.debuggerViewDiv.attr("style", "display: block;");
+		this.debuggerRangeSlider.attr("style", "display: block;");
+		this.debuggerRangeSliderSpan.attr("style", "display: block;");
+	}
+
+	addSelectionClickHandlers(selectionIds) {
+		selectionIds.forEach((id, i) => {
+			$('#' + id).on('click', (e) => {
+				this.debugStr = $('#' + id).text(); // TODO: convert the whole string into some sort of representation...
+				this.hideDebugModal();
+			});
+		});
+	}
+
+	createSelectionChoiceHTML(doc, originalSelectionRange, extendedSelectionRanges) {
+		var msgHTML = '<p>' + 'You selected this in the editor' + '</p>'
+				    + '<pre>' + doc.getTextRange(originalSelectionRange) + '</pre>'
+				    + '<p>' + 'But did you mean one of these?' + '</p>';
+
+		var selectionIds = [];
+		extendedSelectionRanges.forEach((range, i) => {
+			var id = 'fuzzySelectionOption' + i;
+			selectionIds.push(id);
+			var html = '<pre id="' + id + '">' + doc.getTextRange(range) + '</pre>'
+			msgHTML += html;
+		});
+
+		return {html:msgHTML, selectionIds:selectionIds};
+	}
+
+	populateDebugFuzzySelectionView() {
+		this.showDebugModal();
+		var selectedStr = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
+		var selectedLoc = this.editor.selection.getRange();
+		// Fuzzy selection 101 -- find the containing function
+
+		this.sendFuzzySelectionRequest(selectedStr, selectedLoc, (originalSelectionRange, extendedSelectionRanges) => {
+			this.debugModalCodeDiv.html('');
+			var ret = this.createSelectionChoiceHTML(this.editor.getSession().doc, originalSelectionRange, extendedSelectionRanges);
+			this.debugModalCodeDiv.append(ret.html);
+			this.addSelectionClickHandlers(ret.selectionIds);
+		});
+	}
+
+	sendFuzzySelectionRequest(selectedStr, selectedLoc, cb) {
+		var request = {
+			command: FUZZY_SELECT_COMMAND,
+			str: selectedStr,
+			loc: selectedLoc, // {start: {row: 0, column: 0}, end: {row: 0, column: 0}} format, 0-indexed
+			code: this.editorObj.code
+		};
+		$.post({
+			url: LAB_URL + '/' + LAB_ID,
+			data: JSON.stringify(request),
+			success: (data) => {
+				cb(data.originalSelectionRange, data.extendedSelectionRanges);
+			},
+			error: (req, status, err) => {
+				console.error(err);
+			},
+			dataType: 'json',
+			contentType: 'application/json'
+		});
+	}
+
+	////////////////////////////////////////////////////////
+	// Highlight the selected string in the code editor in
+	// the debugger panel and vice versa
+	////////////////////////////////////////////////////////
+	highlightDebugString() {
+		this.debugStr = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
+		this.isDebugStrHighlighted = (this.debugStr !== '');
+
+		// Highlight the selected string (already set before this function is called) 
+		// in the debugger panel
+		this.debuggerViewDiv.highlight(this.debugStr);
+	}
+
+	dehighlightDebugString() {
+		this.isDebugStrHighlighted = false;
+		// TODO: What if there was no portion of text that was highlighted in the debugger panel
+		this.debuggerViewDiv.removeHighlight();
+	}
+
+	handleDebugRequest(traceData) {
+		// Populate the debugger panel content
+		var traces = [];
+		if (!traceData) {
+			var ckptID = this.menuClickID.checkpoint;
+			var testID = this.menuClickID.testcase;
+			if (ckptID !== -1 && testID !== -1) {
+				if (!this.runResults                     	// Sanity checks. Should pass after proper initialization
+					|| !this.runResults[ckptID]          	//
+					|| !this.runResults[ckptID][testID]  	//
+					|| !this.runResults[ckptID][testID][0]) // This is set only after an actual run of the testcase
+				{
+					return this.postWarningNotificationModal({
+						msg: 'Run the test case first'
+					});
+				}
+				traces = this.createDebugTrace(this.runResults[ckptID][testID][0]);
+			}
+		} else {
+			traces = this.createDebugTrace(traceData);
+		}
+
+		if (traces.length > 0) {
+			this.debugTraces = traces;
+			this.debuggerViewDiv.html(this.debugTraces[0]);
+			this.debuggerRangeSlider.slider('option', 'min', 1);
+			this.debuggerRangeSlider.slider('option', 'max', traces.length);
+			this.debuggerRangeSlider.slider('option', 'value', 1);
+			this.debuggerRangeSliderSpan.text(this.createDebuggerSpanText(1, traces.length));
+		} else {
+			return this.postWarningNotificationModal({
+				msg: 'Run the test case first'
+			});
+		}
+
+		// Show the debugger panel
+		this.showDebugger();
+	}
+
+	sendRunRequeset(URL, dataObj, mode) {
+		$.post({
+			url: URL,
+			data: JSON.stringify(dataObj),
+			success: (data) => {
+				this.editorStatus.html("Done");
+				setTimeout(() => {
+					this.editorStatus.fadeOut();
+				}, 2000);
+
+				var json = JSON.parse(data);
+
+				// Set gutter highlight (red) to indicate syntax error
+				this.highlightSyntaxErrors(json.syntaxErrorRanges);
+
+				// Set gutter highlight (yellow) to indicate commented function ranges
+				this.colorCommentedOutFunctions(json.commentedFuncRanges);
+
+				// Either the result contains the entire result
+				// or the specific one.
+				if (mode === RUN_ALL_TESTS_COMMAND) {
 					this.runResults = json.results;
-
-					// Set gutter highlight to indicate syntax error
-					console.log(this.runningCode);
-					this.highlightSyntaxErrors(this.syntaxErrorRanges);
-
 					this.checkpoints.forEach((cp, cp_idx) => {
 						cp.testCases.forEach((testcase, testcase_idx) => {
 							var traceLen = this.runResults[cp_idx][testcase_idx][0].length;
@@ -449,15 +701,70 @@ class Lab {
 								testcaseResImg.attr('src', '../images/error.png');
 							}
 						});
-					});
-					//this.consoleObj.Write(res + '\n', 'jqconsole-output');
-				},
-				error: (req, status, err) => {
-					console.log(err);
-				},
-				dataType: "text",
-				contentType: 'application/json'
-			});
+					});					
+				} else if (mode === RUN_TEST_COMMAND) {
+					var cp_idx = dataObj.checkpoint;
+					var testcase_idx = dataObj.testcase;
+
+					this.runResults[cp_idx][testcase_idx] = json.results[cp_idx][testcase_idx];
+
+					var traceLen = this.runResults[cp_idx][testcase_idx][0].length;
+					var result = '';
+					if (this.runResults[cp_idx][testcase_idx][0][traceLen-1]["event"] === "return") {
+						result = this.runResults[cp_idx][testcase_idx][0][traceLen-1]["stdout"]["__main__"];
+					} else if (this.runResults[cp_idx][testcase_idx][0][traceLen-1]["event"] === "exception") {
+						result = this.runResults[cp_idx][testcase_idx][0][traceLen-1]["exception_msg"];
+					}
+
+					// Update the status image
+					var testcaseResImg = $('#case' + cp_idx + '_' + testcase_idx);
+					var testcase = this.checkpoints[cp_idx].testCases[testcase_idx];
+					if (testcase.want === result) {
+						testcaseResImg.attr('src', '../images/success.png');
+					} else {
+						testcaseResImg.attr('src', '../images/error.png');
+					}
+				}
+				//this.consoleObj.Write(res + '\n', 'jqconsole-output');
+			},
+			error: (req, status, err) => {
+				console.log(err);
+			},
+			dataType: 'text',
+			contentType: 'application/json'
+		});		
+	}
+
+	//////////////////////////////////////////////////////
+	// Handle run requests. There are two modes
+	// mode := [RUN_ALL_TESTS_COMMAND | RUN_TEST_COMMAND]
+	//////////////////////////////////////////////////////
+	handleRunRequest(mode=RUN_ALL_TESTS_COMMAND, checkpoint=-1, testcase=-1) {
+		var URL = LAB_URL + '/' + LAB_ID;
+		var dataObj = {
+			command: mode,
+			code: this.editorObj.code,
+			checkpoint: checkpoint,
+			testcase: testcase,
+			language: LAB_LANG
+		};
+		if (mode === RUN_ALL_TESTS_COMMAND) {
+			this.editorStatus.html("Runnig tests ... ");
+		} else if (mode === RUN_TEST_COMMAND) {
+			this.editorStatus.html("Runnig a single test ... ");
+		}
+
+		this.sendRunRequeset(URL, dataObj, mode);
+		this.showConsole();
+		this.editorStatus.css('display', 'inline');
+	}
+
+	//////////////////////////////////////////////////////
+	// Run all the test cases
+	//////////////////////////////////////////////////////
+	addRunAllTestsBtnHandler() {
+		this.runAllTestsBtn.on('click', (e) => {
+			this.handleRunRequest(RUN_ALL_TESTS_COMMAND);
 		});
 	}
 
@@ -514,22 +821,28 @@ class Lab {
 		});
 	}
 
-	createDebugTrace(data) {
+	createDebugTrace(trace) {
 		// Take the JSON string data and create it into an array of info
-		var JSONObj = JSON.parse(data);
-		var trace = JSONObj['trace'];
-
 		var executionText = '';
 		var executionTraces = [];
 		for (let i = 0; i < trace.length; ++i) {
 			var orderedGlobals = trace[i]['ordered_globals'];
-			if (orderedGlobals.length > 0) {
-				executionText += 'Global Frame<br>';
-				executionText += '<ul>'
-				for (let j = 0; j < orderedGlobals.length; ++j) {
-					executionText += '<li>' + orderedGlobals[j] + '</li>';
+
+			if (!orderedGlobals) {
+				// Check whether there was an exception
+				if (trace[i]['event'] === 'uncaught_exception') {
+					executionText += 'Exception<br>';
+					executionText += trace[i]['exception_msg'];
 				}
-				executionText += '</ul>'
+			} else {
+				if (orderedGlobals.length > 0) {
+					executionText += 'Global Frame<br>';
+					executionText += '<ul>'
+					for (let j = 0; j < orderedGlobals.length; ++j) {
+						executionText += '<li>' + orderedGlobals[j] + '</li>';
+					}
+					executionText += '</ul>'
+				}
 			}
 
 			var printOutput = trace[i]['stdout'];
@@ -538,21 +851,26 @@ class Lab {
 			}
 
 			var stackElems = trace[i]['stack_to_render'];
-			if (stackElems.length > 0) {
-				executionText += 'Stack Frame<br>'
-				executionText += '<ul>'
-				for (let j = 0; j < stackElems.length; ++j) {
-					var elem = stackElems[j];
-					var encodedLocalNames = Object.keys(elem['encoded_locals']);
-					encodedLocalNames.forEach((name, k) => {
-						if (name === "__return__") {
-							executionText += '<li>Return' + ':' + elem['encoded_locals'][name] + '</li>';
-						} else {
-							executionText += '<li>' + name + ':' + elem['encoded_locals'][name] + '</li>';
-						}
-					});
-				}
-				executionText += '</ul>'
+
+			if (!stackElems) {
+
+			} else {
+				if (stackElems.length > 0) {
+					executionText += 'Stack Frame<br>'
+					executionText += '<ul>'
+					for (let j = 0; j < stackElems.length; ++j) {
+						var elem = stackElems[j];
+						var encodedLocalNames = Object.keys(elem['encoded_locals']);
+						encodedLocalNames.forEach((name, k) => {
+							if (name === "__return__") {
+								executionText += '<li>Return' + ':' + elem['encoded_locals'][name] + '</li>';
+							} else {
+								executionText += '<li>' + name + ':' + elem['encoded_locals'][name] + '</li>';
+							}
+						});
+					}
+					executionText += '</ul>'
+				}				
 			}
 
 			if (executionText !== '') {
@@ -564,15 +882,11 @@ class Lab {
 		return executionTraces;
 	}
 
+	//////////////////////////////////////////////////////
+	// Debugs the entire code 
+	//////////////////////////////////////////////////////
 	addDebugBtnHandler() {
 		this.debugBtn.on('click', (e) => {
-			// Show the debugger
-			this.console.attr("style", "display: none;");
-			this.consoleClear.attr("style", "display: none;");
-			this.debuggerViewDiv.attr("style", "display: block;");
-			this.debuggerRangeSlider.attr("style", "display: block;");
-			this.debuggerRangeSliderSpan.attr("style", "display: block;");
-
 			// arrow function lets 'this' to be looked up in the lexical scope
 			var URL = LAB_URL + '/' + LAB_ID;
 			var dataObj = {
@@ -584,15 +898,7 @@ class Lab {
 				url: URL,
 				data: JSON.stringify(dataObj),
 				success: (data) => {
-					var traces = this.createDebugTrace(data);
-					if (traces.length > 0) {
-						this.debugTraces = traces;
-						this.debuggerViewDiv.html(this.debugTraces[0]);
-						this.debuggerRangeSlider.slider('option', 'min', 1);
-						this.debuggerRangeSlider.slider('option', 'max', traces.length);
-						this.debuggerRangeSlider.slider('option', 'value', 1);
-						this.debuggerRangeSliderSpan.text(this.createDebuggerSpanText(1, traces.length));
-					}
+					this.handleDebugRequest(this.createDebugTrace(JSON.parse(data)['trace']));
 				},
 				error: (req, status, err) => {
 					console.log(err);
@@ -603,19 +909,21 @@ class Lab {
 		});
 	}
 
-	// currently no-use
-	addEditorContentChangeEventHandler() {
-		this.editorObj.editor.getSession().on('change', function() {
-			// chunking every 10 second? Would there be a good behavioral cue that 
-			// can tell us that the student's thought train has stopped and 
-			// the working code is produced? I.e. how do we know from behavioral cues
-			// that one has produced a syntax-error free chunk of code?
-			// probably not ... we will just let the server do the work.
-
-			// Send the server the code to parse every 3 second or so, and the server will
-			// Parse it and store it to the database ... what will happen if there are many
-			// duplicates? Should we dedup the database every once in a while?
-		});
+	removeMarkersInEditorSelection() {
+		var editLine = this.editor.getSelectionRange().start.row;
+		// If the edited content's line no. overlaps with any of the lines of the
+		// previously created error, remove squiggly lines in those lines
+		var idx = 0;
+		while (idx < this.prevErrorMarkers.length) {
+			var marker = this.prevErrorMarkers[idx];
+			if (marker.startLine <= editLine
+				&& editLine <= marker.endLine) {
+				this.editor.session.removeMarker(marker.id);
+				this.prevErrorMarkers.splice(idx, 1);
+			} else {
+				idx++;
+			}
+		}		
 	}
 
 	addBtnHandlers() {
@@ -630,6 +938,8 @@ class Lab {
 		this.loginModalHandler();
 		this.signupLinkClickHandler();
 		this.loginLinkClickHandler();
+		this.addQuestionModalHandler();
+		this.addDebugModalHandler();
 	}
 
 	addCheckpoint(checkpoint) {
@@ -671,7 +981,7 @@ class Lab {
 				startPrompt();
 			});
 		};
-		startPrompt();		
+		startPrompt();
 	}
 
 	initConsole() {
@@ -696,16 +1006,39 @@ class Lab {
 			value: 0
 		});
 
+		// If the highlight string was saved before, highlight it
+		if (this.debugStr) {
+			this.highlightDebugString();
+		}
+
 		this.debuggerRangeSlider.on('slide', (event, ui) => {
 			this.debuggerRangeSliderSpan.text(
 				this.createDebuggerSpanText(ui.value, this.debuggerRangeSlider.slider('option', 'max'))
 			);
 			this.debuggerViewDiv.html(this.debugTraces[ui.value - 1]);
+
+			if (this.isDebugStrHighlighted) {
+				this.highlightDebugString();
+			}
 		});
 
 		this.debuggerRangeSliderSpan.text(
 			this.createDebuggerSpanText(0, 0)
 		);
+	}
+
+	//////////////////////////////////////////////////////
+	// Initializes the testcase results array
+	// for use later
+	//////////////////////////////////////////////////////
+	initializeResultsArray() {
+		// Can be run only after this.checkpoints are initialized
+		this.checkpoints.forEach((cp, cp_i) => {
+			this.runResults[cp_i] = [];
+			cp.testCases.forEach((testcase, tc_i) => {
+				this.runResults[cp_i][tc_i] = [];
+			});
+		});
 	}
 
 	initStatus() {
@@ -721,6 +1054,10 @@ class Lab {
 				success: (data) => {
 					if (data.ok) {
 						this.checkpoints = data.checkpoints;
+
+						// Initializing the results array with appropriate dimensions
+						this.initializeResultsArray();
+
 						this.userData = data.userData;
 						this.editorObj.code = data.userData.code;
 						// TODO: Why creating a new object everytime?
@@ -728,10 +1065,18 @@ class Lab {
 						//var parsedObj = testParser.parse();
 						//this.editorObj.code = parsedObj.code; // inject the last saved code w/o test cases
 						
+						// Console status initialization
 						this.consoleObj.Write(this.userData.console.content, 'jqconsole-output');
 						this.consoleObj.SetHistory(this.userData.console.history);
 
-						// Add interaction (click) handlers
+						// Debugger status initialization
+						this.debugTraces = this.userData.debugger.debugTraces;
+						this.debugStr = this.userData.debugger.highlightedStr;
+						this.isDebugStrHighlighted = (this.debugStr !== '');
+
+						// Add interaction (click) handlers. Added once the POST request
+						// returns here, since it uses member variables that get set
+						// with the request response
 						this.addDoubleClickHandler();
 					}
 				},
@@ -755,7 +1100,6 @@ class Lab {
 
 		function moveEditorCursor(editor, range) {
 			var row = range.start.row;
-			//editor.addSelectionMarker(range);
 			editor.resize(true);
 			editor.scrollToLine(row+1, true, true, () => {});
 			editor.gotoLine(row+1, 0, true);
@@ -783,7 +1127,6 @@ class Lab {
 							'<b>' + 'def ' + checkpointName + '(...)' + '</b>'
 						});
 				}
-
 				moveEditorCursor(this.editorObj.editor, range);
 			});
 		});
@@ -792,64 +1135,127 @@ class Lab {
 			$(el).on('dblclick', (e) => {
 				var nums = el.id.split('testcase-html-div')[1].split('_');
 				var checkpointNum = nums[0];
-				var testcaseNum = nums[1]
-				var searchStr = 'def ' + this.checkpoints[checkpointNum].name.split('.')[1];
+				var testcaseNum = nums[1];
+				var checkpointName = this.checkpoints[checkpointNum].name.split('.')[1];
+				var searchStr = 'def ' + checkpointName;
 				var range = findFooLineNumber(this.editorObj.editor, searchStr);
+
+				if (!range) {
+					return this.postWarningNotificationModal(
+						{msg:
+							'Function ' +
+							'<i>' + checkpointName + '</i>' +
+							' does not seem to exist.' +
+							'<br>' +
+							'Why don\'t you create one?' +
+							'<br>' +
+							'<b>' + 'def ' + checkpointName + '(...)' + '</b>'
+						});
+				}
 				moveEditorCursor(this.editorObj.editor, range);
 			});
 		});
 	}
 
-	//////////////////////////////
+	//////////////////////////////////////////////////////
 	// Context Menu Related
-	//////////////////////////////
+	//////////////////////////////////////////////////////
 	collectContextMenu() {
-		this.contextMenu = $("#context-menu");
+		this.contextMenuWithDebug = $('#context-menu-with-debug');
+		this.contextMenuWithDebugHighlight = $("#context-menu-with-debug-highlight");
 	}
 
 	collectQuestionModal() {
 		// TODO: Check if i matches with the index included in the identifier of el
 		this.questionModal = 
 		{
-			questionID: 0, // TODO: FIX THIS TO A REAL CHECKPOINT NUMBER
-			questionModal: $('#question-modal'),
-			questionModalCheckpoint: $('#question-modal-checkpoint'),
-			questionModalTestCases: $('#question-modal-testcases'),
-			questionModalCode: $('#question-modal-code'),
-			questionModalText: $('#question-modal-text'),
-			questionModalSubmitBtn: $('#question-modal-submit-btn'),
-			questionModalCloseBtn: $('#question-modal-close')
+			questionModal: $('#question-modal'), 						// the modal itself
+			questionModalCheckpoint: $('#question-modal-checkpoint'), 	// user-facing checkpoint
+			questionModalTestCases: $('#question-modal-testcases'), 	// user-facing test case results (to reassure
+																		// them that they're asking a question for 
+																		// the right testcase)
+			questionModalCode: $('#question-modal-code'), 				// selected code block from the editor
+			questionModalText: $('#question-modal-text'), 				// question text
+			questionModalStatus: $('#question-modal-status'),
+			questionModalSubmitBtn: $('#question-modal-submit-btn'), 	// the quesiton submit button
+			questionModalCloseBtn: $('#question-modal-close') 			// the close button
 		};
+	}
+
+	highlightBackdrop(testcaseHTMLDiv) {
+		if (!testcaseHTMLDiv) return;
+		testcaseHTMLDiv.setAttribute('style', 'background-color: rgba(255,255,0,0.2)');
+	}
+
+	dehighlightBackdrop(testcaseHTMLDiv) {
+		if (!testcaseHTMLDiv) return;
+		testcaseHTMLDiv.setAttribute('style', 'background-color: rgb(255,255,255)');
+	}
+
+	parseIDsFromDiv(div) {
+		// div is not a jquery object
+		var idStr = div.id;
+		var handle = 'testcase-html-div';
+		var ids = idStr.slice(handle.length).split(/_/);
+
+		if (ids.length !== 2) { return null; } // ill-formed ID
+		return {checkpoint: ids[0], testcase: ids[1]};
 	}
 
 	addContextListener() {
 		/* IE >= 9 */
 		document.addEventListener("contextmenu", (e) => {
 			e.preventDefault();
-			this.toggleMenuOn();
+			// Prevent any pre-existing visual cues (if any)
+			this.toggleContextMenuOff();
+			this.dehighlightBackdrop(this.prevTestcaseHTMLDiv);
+			var parentTestcaseHTMLDivArray = $(e.target).parents('div[id^="testcase-html-div"]');
+			if (parentTestcaseHTMLDivArray.length !== 0) {
+				// Dehighlight the previous selection from a click
+				// Choose the closest parent from the parent selection above
+				var testcaseHTMLDiv = parentTestcaseHTMLDivArray[0];
+
+				// Highlight the new selection
+				this.highlightBackdrop(testcaseHTMLDiv);
+
+				// Update the previous selection with the new selection
+				this.prevTestcaseHTMLDiv = testcaseHTMLDiv;
+
+				// Extract the clicked menu IDs (e.g. checkpoint and testcase ID)
+				this.menuClickID = this.parseIDsFromDiv(testcaseHTMLDiv);
+
+				// Show the context menu
+				this.toggleContextMenuWithDebugOn();
+			} else {
+				this.togglecontextMenuWithDebugHighlightOn();
+			}
 			this.positionMenu(e);
 		});
 
 		document.addEventListener("click", (e) => {
 			var button = e.which || e.button;
 			if (button === 1) {
-				this.toggleMenuOff();
-				if (e.target.id === this.askQuestionMenuID) {
-					var textBlock = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
-					$('#question-modal-code').text(textBlock);
-					this.questionModal.questionModal.css('display', 'block');
-				} else if (e.target.id === this.viewHintMenuID) {
-					// TODO: implement me...
+				this.toggleContextMenuOff();
+				this.dehighlightBackdrop(this.prevTestcaseHTMLDiv);
+				if (e.target.id === this.askQuestionMenuID || e.target.id === this.askQuestionMenuIDDebug) {
+					var codeBlock = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
+					this.showQuestionModal(codeBlock);
+				} else if (e.target.id === this.viewHintMenuID || e.target.id === this.viewHintMenuIDDebug) {
+					// TODO: implement me ...
 				} else if (e.target.id === this.debugMenuID) {
-					this.debugStr = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
-					// TODO: this is not separated... having a separate class like this doesn't make
-					//       sense b/c this class would need access to other elements in the DOM.
-					// 		 Also, how would you make it so that the text selection is maintained (and
-					//		 highlighted) across different tabs in the execution slider?
-					$('#debugger-view-div').highlight(this.debugStr); // TODO: remove this separate id tag
+					this.handleDebugRequest();
+				} else if (e.target.id === this.runTestcaseID) {
+					this.handleRunRequest(RUN_TEST_COMMAND, this.menuClickID.checkpoint, this.menuClickID.testcase);
+				} else if (e.target.id === this.debugHighlightMenuID) {
+					this.populateDebugFuzzySelectionView();				
+					this.highlightDebugString();
+				} else if (e.target.id === this.debugDehighlightMenuID) {
+					this.dehighlightDebugString();
+				} else if (e.target.id === this.visualDebugMenuID) {
+
 				}
 			} else {
-				this.toggleMenuOff();
+				this.toggleContextOff();
 				// TODO: Turn off the highlight as well?
 			}
 			return true;
@@ -857,26 +1263,58 @@ class Lab {
 	}
 
 	addKeyUpListner() {
-		/* Remove the context menu on pressing the ESC key */
+		// Remove the context menu on pressing the ESC key
 		window.onkeyup = (e) => {
 			if (e.keyCode === 27) {
-				this.toggleMenuOff();
+				// Close the context menu
+				this.toggleContextMenuOff();
+
+				// Close the question modal
+				this.hideQuestionModal();
+
+				// Close the debug modal
+				this.hideDebugModal();
+
+				// Remove the testcase div highlighting too, as the selection is withdrawn
+				this.dehighlightBackdrop(this.prevTestcaseHTMLDiv);
 			}
 		};
 	}
 
-	toggleMenuOn() {
+	toggleContextMenuWithDebugOn() {
 		if (!this.isContextMenuVisible) {
 			this.isContextMenuVisible = true;
-			this.contextMenu.addClass(this.activeClassName);
+			this.contextMenuWithDebug.addClass(this.activeClassName);
 		}
 	}
 
-	toggleMenuOff() {
+	togglecontextMenuWithDebugHighlightOn() {
+		if (!this.isContextMenuVisible) {
+			this.isContextMenuVisible = true;
+
+			// Debug highlight is possible only when the code is runnable (free of syntax errors)
+			if (this.prevSyntaxErrorRanges.length !== 0) {
+				this.hideDebugHighlightMenu();
+				this.hideDebugDehighlightMenu();
+			} else {
+				if (this.isDebugStrHighlighted) {
+					this.hideDebugHighlightMenu();
+					this.showDebugDehighlightMenu();
+				} else {
+					this.showDebugHighlightMenu();
+					this.hideDebugDehighlightMenu();
+				}
+			}
+			this.contextMenuWithDebugHighlight.addClass(this.activeClassName);
+		}
+	}
+
+	toggleContextMenuOff() {
 		if (this.isContextMenuVisible) {
 			this.isContextMenuVisible = false;
-			this.contextMenu.removeClass(this.activeClassName);
-		}
+			this.contextMenuWithDebug.removeClass(this.activeClassName);
+			this.contextMenuWithDebugHighlight.removeClass(this.activeClassName);
+		}		
 	}
 
 	getPosition(e) {
@@ -905,46 +1343,58 @@ class Lab {
 		this.clickCoordsX = this.clickCoords.x;
 		this.clickCoordsY = this.clickCoords.y;
 
-		this.contextMenuWidth = this.contextMenu.width() + 4;
-		this.contextMenuHeight = this.contextMenu.height() + 4;
+		var contextMenuWithDebugWidth = this.contextMenuWithDebug.width() + 4;
+		var contextMenuWithDebugHeight = this.contextMenuWithDebug.height() + 4;
+
+		var contextMenuWithDebugHighlightWidth = this.contextMenuWithDebugHighlight.width() + 4;
+		var contextMenuWithDebugHighlightHeight = this.contextMenuWithDebugHighlight.height() + 4;
 
 		this.windowWidth = window.innerWidth;
 		this.windowHeight = window.innerHeight;
 
 		var styleStr = '';
+		var styleStrDebugHighlight = '';
 
-		if ((this.windowWidth - this.clickCoordsX) < this.contextMenuWidth) {
-			styleStr += "left: " + (this.windowWidth - this.contextMenuWidth) + "px;";
+		if ((this.windowWidth - this.clickCoordsX) < contextMenuWithDebugWidth) {
+			styleStr += "left: " + (this.windowWidth - contextMenuWithDebugWidth) + "px;";
 		} else {
 			styleStr += "left: " + this.clickCoordsX + "px;";
 		}
 
-		if ((this.windowHeight - this.clickCoordsY) < this.contextMenuHeight) {
-			styleStr += "top: " + (this.windowHeight - this.contextMenuHeight) + "px;";
+		if ((this.windowHeight - this.clickCoordsY) < contextMenuWithDebugHeight) {
+			styleStr += "top: " + (this.windowHeight - contextMenuWithDebugHeight) + "px;";
 		} else {
 			styleStr += "top: " + this.clickCoordsY + "px;";
 		}
 
-		this.contextMenu.attr("style", styleStr);
+		if ((this.windowWidth - this.clickCoordsX) < contextMenuWithDebugHighlightWidth) {
+			styleStrDebugHighlight += "left: " + (this.windowWidth - contextMenuWithDebugHighlightWidth) + "px;";
+		} else {
+			styleStrDebugHighlight += "left: " + this.clickCoordsX + "px;";
+		}
+
+		if ((this.windowHeight - this.clickCoordsY) < contextMenuWithDebugHighlightHeight) {
+			styleStrDebugHighlight += "top: " + (this.windowHeight - contextMenuWithDebugHighlightHeight) + "px;";
+		} else {
+			styleStrDebugHighlight += "top: " + this.clickCoordsY + "px;";
+		}
+
+		this.contextMenuWithDebug.attr("style", styleStr);
+		this.contextMenuWithDebugHighlight.attr("style", styleStrDebugHighlight);
 	}
 
-	addQusetionModalHandler() {
-		var qModal = this.questionModal;
-		qModal.questionModalSubmitBtn.on("click", (e) => {
+	addQuestionModalHandler() {
+		// Submit button handling
+		this.questionModal.questionModalSubmitBtn.on("click", (e) => {
 			// Assumes that the user selected an appropriate block of code
-			var textBlock = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange());
-			qModal.questionModalCode.text(textBlock);
-			var question = qModal.questionModalText.val();
-			var checkpointID = qModal.questionID;
-			var testCases = qModal.questionModalTestCases.html();
 			var data = {
 				command: QUESTION_COMMAND,
-				question: question, // TODO: modify this
-				checkpointID: checkpointID, // TODO: check if the IDs actually match
-				testCases: testCases, // TODO: modify the format
-				userName: USER_NAME, // should've been already logged in and the userName is set
+				question: this.questionModal.questionModalText.val(),
+				checkpoint: this.menuClickID.checkpoint,
+				testcase: this.menuClickID.testcase,
+				userName: USER_NAME,
 				language: LAB_LANG,
-				code: textBlock
+				code: this.questionModal.questionModalCode.text()
 			};
 			var URL = QUESTION_URL + "/" + LAB_ID;
 			//-- preferrably we will show a pop up to fill out the rest of the question details
@@ -956,7 +1406,7 @@ class Lab {
 				success: (data, status) => {
 					// Send the message to a subset of people based on the result of AST analysis
 					QUESTION_SOCKET.emit('question', data); // Transfer the question in 'data'
-					qModal.questionModal.css('display', 'none');
+					this.hideQuestionModal();
 				},
 				error: (req, status, err) => {
 					console.log(err);
@@ -966,45 +1416,33 @@ class Lab {
 			});
 		});
 
-		qModal.questionModalCloseBtn.on("click", (e) => {
-			qModal.questionModal.css('display', 'none');
+		// Close button handling
+		this.questionModal.questionModalCloseBtn.on("click", (e) => {
+			this.hideQuestionModal();
 		});
 	}
-}
 
-class EditorController {
-	constructor() {
-		this.lab = new Lab();
-	}
-}
+	addDebugModalHandler() {
+		this.debugModalClose.on('click', (e) => {
+			this.hideDebugModal();
+		});
 
-////////////////////////////////////////////////////////////////////////////////////////
-// Saving the code with debouncing when its content has changed 
-//
-//	Dependencies:
-//	- jQuery (included)
-//	- jQuery doTimeout (included) http://benalman.com/projects/jquery-dotimeout-plugin/
-//	- diff-match-patch (included) https://code.google.com/p/google-diff-match-patch/
-//	- Ace (check out from GitHub into pwd) https://github.com/ajaxorg/ace-builds
-////////////////////////////////////////////////////////////////////////////////////////
-class CodeSaveController {
-	constructor() {
-		this.dmp = new diff_match_patch();
-		this.DEBOUNCE_MS = 5000;// milliseconds of debouncing (i.e., 'clustering' a
-								// rapid series of edit actions as a single diff)
-								// set to 'null' for no debouncing
-		this.editor = null;
-		this.curText = '';
-
-		this.init();
+		this.debugModalOkBtn.on('click', (e) => {
+			this.hideDebugModal();
+		});
 	}
 
-	init() {
-		// Get the editor instance instantiated from controller.js
-		this.editor = ace.edit("editor"); // TODO: Why don't we use the already existing instance?
-		this.addContentChangeHandler();
-	}
-
+	//////////////////////////////////////////////////////
+	// Debouncing and code auto save related functions
+	//	Dependencies:
+	//	- jQuery (included)
+	//	- jQuery doTimeout (included) 
+	//    benalman.com/projects/jquery-dotimeout-plugin/
+	//	- diff-match-patch (included)
+	//    code.google.com/p/google-diff-match-patch/
+	//	- Ace (check out from GitHub into pwd)
+	//    github.com/ajaxorg/ace-builds
+	//////////////////////////////////////////////////////
 	addContentChangeHandler() {
 		function snapshotDiff(self) {
 			var newText = self.editor.getValue();
@@ -1030,6 +1468,10 @@ class CodeSaveController {
 		}
 
 		this.editor.on('change', (e) => {
+			// Remove the syntax error squiggly lines
+			this.removeMarkersInEditorSelection();
+
+			// Debouncing and auto saving
 			if (this.DEBOUNCE_MS > 0) {
 				$.doTimeout('editorChange', this.DEBOUNCE_MS, () => { snapshotDiff(this); });
 			} else {
@@ -1050,8 +1492,13 @@ class CodeSaveController {
 		{
 			url: URL,
 			data: JSON.stringify(data),
-			success: (data, status) => {
-				// ...
+			success: (data) => {
+				console.log(data);
+				// Set gutter highlight to indicate syntax error
+				this.highlightSyntaxErrors(data.syntaxErrorRanges);
+
+				// Yellow out the functions that are commented out
+				this.colorCommentedOutFunctions(data.commentedFuncRanges);
 			},
 			error: (req, status, err) => {
 				console.log(err);
@@ -1062,9 +1509,13 @@ class CodeSaveController {
 	}
 }
 
+class EditorController {
+	constructor() {
+		this.lab = new Lab();
+	}
+}
 
 $(document).ready(function() {
 	var editorCtrl = new EditorController();
-	var codeSaveCtrl = new CodeSaveController();
 });
 
