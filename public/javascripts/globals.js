@@ -16,8 +16,8 @@ const FUZZY_SELECT_COMMAND		= "fuzzySelect";
 const SEARCH_LAB_IDS_COMMAND	= "searchLabIDs";
 const CREATE_LAB_ID_COMMAND		= "newLabID";
 
-const SERVER_URL 				= "http://localhost:3000";
-//const SERVER_URL 				= "https://labyrinth1.herokuapp.com";
+//const SERVER_URL 				= "http://localhost:3000";
+const SERVER_URL 				= "https://labyrinth1.herokuapp.com";
 const LAB_URL 					= SERVER_URL + "/lab";
 const QUESTION_URL 				= SERVER_URL + "/question";
 const AUTHOR_URL				= SERVER_URL + "/author";
