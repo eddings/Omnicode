@@ -14,6 +14,19 @@ table, tr, td, th, td {
 	font-weight: 300;
 }
 
+pre {
+    display: block;
+    padding: 0px;
+    margin: 0 auto;
+    font-size: 12px;
+    line-height: 1.2;
+    color: #333;
+    word-break: break-all;
+    background-color: #fff;
+    border: none;
+    word-wrap: break-word;
+}
+
 /* Lab page skeleton */
 /*
 .whole-pane {
@@ -35,6 +48,7 @@ table, tr, td, th, td {
     width: ~"calc(50vw - 10px)";
 }
 
+/*
 .lab-doc {
     .left-pane;
 	top: 60px;
@@ -47,6 +61,69 @@ table, tr, td, th, td {
     .left-pane;
 	font-family: 'Lato', sans-serif;
 	font-weight: 300;
+    top: 8px;
+    display: inline-block;
+}
+
+#user-name {
+    display: inline;
+}
+*/
+.left-pane-400 {
+    position: absolute;
+    width: 500px;
+}
+
+.right-pane-400 {
+    position: absolute;
+    left: 500px;
+    width: ~"calc(100vw - 500px - 500px)";
+}
+
+.rightmost-pane {
+    position: absolute;
+    left: ~"calc(100vw - 500px)";
+    width: 500px;
+}
+
+#tabs {
+    .right-pane-400;
+    top: 0;
+    height: ~"calc(100vh - 90px)";
+    overflow-y: scroll;    
+}
+
+/* Diff Code Panel */
+#diff-code-panel-title {
+    display: none;
+    .rightmost-pane;
+}
+
+#diff-code-panel {
+    display: none;
+    .rightmost-pane;
+    top: 30px;
+    height: ~"calc(100vh - 120px)";
+    overflow-y: scroll;
+}
+
+.lab-doc {
+    .right-pane-400;
+    top: 60px;
+    height: ~"calc(100vh - 70px)";
+    overflow-y: scroll;
+}
+
+.history {
+    display: none;
+    .right-pane-400;
+    top: ~"calc(100vh - 90px)";
+}
+
+.info {
+    .left-pane-400;
+    font-family: 'Lato', sans-serif;
+    font-weight: 300;
     top: 8px;
     display: inline-block;
 }
@@ -92,7 +169,7 @@ table, tr, td, th, td {
     color: #808080;
 }
 
-/* Small height screens */
+/* Small height screens
 @media screen and (min-height: 200px), screen and (max-height: 550px) {
     .code-editor {
         .right-pane;
@@ -150,8 +227,8 @@ table, tr, td, th, td {
         height: 10px;
     }
 }
-
-/* Large height screens */
+*/
+/* Large height screens 
 @media screen and (min-height: 550px) {
     .code-editor {
         .right-pane;
@@ -208,6 +285,71 @@ table, tr, td, th, td {
         width: ~"calc(50vw - 20px)";
         height: 10px;
     }
+    #visual-debugger-view-div {
+        height: 420px;
+    }
+}
+*/
+
+.code-editor {
+    .left-pane-400;
+    top: 30px;
+    bottom: 220px;
+    height: ~"calc(100vh - 250px)";
+}
+.code-button {
+    position: absolute;
+    width: 480px;
+    left: 10px;
+    top: ~"calc(100vh - 230px - 10px + 25px)";
+    height: 20px;
+}
+#console {
+    .left-pane-400;
+    left: 10px;
+    right: 10px;
+    width: 380px;
+    top: ~"calc(100vh - 220px + 40px)";
+    height: 160px;
+}
+#console-clear {
+    .left-pane-400;
+    left: 10px;
+    top: ~"calc(100vh - 40px + 15px)";
+    height: 10px;
+}
+#debugger-view-div {
+    display: none;
+    position: absolute;
+    width: 480px;
+    left: 10px;
+    top: ~"calc(100vh - 200px)";
+    height: 145px;
+    overflow-y: scroll;
+}
+#debugger-range-slider {
+    display: none;
+    position: absolute;
+    width: 480px;
+    left: 10px;
+    top: ~"calc(100vh - 35px)";
+    height: 10px;
+}
+#debugger-range-slider-span {
+    display: none;
+    position: absolute;
+    width: 480px;
+    left: 10px;
+    top: ~"calc(100vh - 25px)";
+    height: 10px;
+}
+
+.custom-vis-close {
+    display: none;
+    color: #aaaaaa;
+    float: right;
+    font-size: 14px;
+    font-weight: bold;
 }
 
 .checkpoint-status-img img, .checkpoint-status-img div {
@@ -489,12 +631,20 @@ table, tr, td, th, td {
 
 /* Ace editor gutter style */
 .redMarker, .redGutter {
-  /*background-color: #ffecec;*/ /* from GitHub diffs */
-  background-color: #ffbbbb; /* a wee bit darker, from GitHub */
+    /*background-color: #ffecec;*/ /* from GitHub diffs */
+    background-color: #ffbbbb; /* a wee bit darker, from GitHub */
 }
 
 .greyMarker, .greyGutter {
-  background-color: rgb(160,160,160); /* a wee bit darker, from GitHub */
+    background-color: rgb(160,160,160); /* a wee bit darker, from GitHub */
+}
+
+.navyMarker, .navyGutter {
+    background-color: #000080;
+}
+
+.orangeMarker, .orangeGutter {
+    background-color: rgba(255,127,80, 0.7);
 }
 
 /* Syntax error highlight Ace editor */
@@ -505,4 +655,80 @@ table, tr, td, th, td {
     position: absolute;
     cursor: pointer !important;
     pointer-events: auto;
+}
+
+/* Visualization */
+.vis-close {
+    color: #aaaaaa;
+    float: right;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+svg {
+  font: 10px sans-serif;
+  padding: 10px;
+}
+
+.axis,
+.frame {
+    shape-rendering: crispEdges;
+}
+
+.axis line {
+  stroke: #ddd;
+}
+
+.axis path {
+  display: none;
+}
+
+.cell text {
+  font-weight: bold;
+  /* text-transform: capitalize; */
+}
+
+.frame {
+  fill: none;
+  stroke: #aaa;
+}
+
+circle {
+  fill-opacity: .7;
+}
+
+circle.hidden {
+  fill: #ccc !important;
+}
+
+.extent {
+  fill: #000;
+  fill-opacity: .125;
+  stroke: #fff;
+}
+
+/* Line numbered <pre> */
+pre code,
+pre .line-number {
+  /* Ukuran line-height antara teks di dalam tag <code> dan <span class="line-number"> harus sama! */
+  font:normal normal 12px/14px Monospace;
+  color:black;
+  display:block;
+}
+
+pre .line-number {
+  float:left;
+  margin:0 1em 0 -1em;
+  border-right:1px solid;
+  text-align:right;
+}
+
+pre .line-number span {
+  display:block;
+  padding:0 .5em 0 1em;
+}
+
+pre .cl {
+  display:block;
+  clear:both;
 }

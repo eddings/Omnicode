@@ -13,7 +13,7 @@ S'\n\n# My first Labyrinth lab\n\nThis is the lab description -- write whatever 
 p6
 sS'filename'
 p7
-S'./labs/test2\\lab.py'
+S'./labs/sqrt\\lab.py'
 p8
 sS'lineno'
 p9
@@ -29,7 +29,7 @@ g3
 S'lab.factorial'
 p14
 sg5
-S'\n    Lab part 1\n\n    lab description in markdown format\n   \n    Return the factorial of n, an exact integer >= 0.\n\n    If the result is small enough to fit in an int, return an int.\n    Else return a long.\n\n    ------\n\n    >>> print [factorial(n) for n in range(6)]\n    [1, 1, 2, 6, 24, 120]\n    >>> print [factorial(long(n)) for n in range(6)]\n    [1, 1, 2, 6, 24, 120]\n    >>> print factorial(30)\n    265252859812191058636308480000000\n    >>> print factorial(30L)\n    265252859812191058636308480000000\n    >>> print factorial(-1)\n    Traceback (most recent call last):\n        ...\n    ValueError: n must be >= 0\n    >>> print factorial(30.1)\n    Traceback (most recent call last):\n        ...\n    ValueError: n must be exact integer\n    >>> print factorial(30.0)\n    265252859812191058636308480000000\n    >>> print factorial(1e100)\n    Traceback (most recent call last):\n        ...\n    OverflowError: n too large\n    '
+S'\n    Lab part 1\n\n    lab description in markdown format\n   \n    Return the factorial of n, an exact integer >= 0.\n\n    If the result is small enough to fit in an int, return an int.\n    Else return a long.\n\n    ------\n\n    >>> print factorial(1)\n    1\n    >>> print factorial(2)\n    2\n    >>> print factorial(3)\n    6\n    >>> print factorial(4)\n    24\n    >>> print factorial(5)\n    120\n    >>> print [factorial(long(n)) for n in range(6)]\n    [1, 1, 2, 6, 24, 120]\n    >>> print factorial(30)\n    265252859812191058636308480000000\n    >>> print factorial(30L)\n    265252859812191058636308480000000\n    >>> print factorial(-1)\n    Traceback (most recent call last):\n        ...\n    ValueError: n must be >= 0\n    >>> print factorial(30.1)\n    Traceback (most recent call last):\n        ...\n    ValueError: n must be exact integer\n    >>> print factorial(30.0)\n    265252859812191058636308480000000\n    >>> print factorial(1e100)\n    Traceback (most recent call last):\n        ...\n    OverflowError: n too large\n    '
 p15
 sg7
 g8
@@ -48,13 +48,13 @@ sS'exc_msg'
 p20
 NsS'source'
 p21
-S'print [factorial(n) for n in range(6)]\n'
+S'print factorial(1)\n'
 p22
 sg9
 I12
 sS'want'
 p23
-S'[1, 1, 2, 6, 24, 120]\n'
+S'1\n'
 p24
 sS'options'
 p25
@@ -67,12 +67,12 @@ g19
 I4
 sg20
 Nsg21
-S'print [factorial(long(n)) for n in range(6)]\n'
+S'print factorial(2)\n'
 p29
 sg9
 I14
 sg23
-S'[1, 1, 2, 6, 24, 120]\n'
+S'2\n'
 p30
 sg25
 (dp31
@@ -84,12 +84,12 @@ g19
 I4
 sg20
 Nsg21
-S'print factorial(30)\n'
+S'print factorial(3)\n'
 p34
 sg9
 I16
 sg23
-S'265252859812191058636308480000000\n'
+S'6\n'
 p35
 sg25
 (dp36
@@ -101,12 +101,12 @@ g19
 I4
 sg20
 Nsg21
-S'print factorial(30L)\n'
+S'print factorial(4)\n'
 p39
 sg9
 I18
 sg23
-S'265252859812191058636308480000000\n'
+S'24\n'
 p40
 sg25
 (dp41
@@ -117,263 +117,263 @@ p42
 g19
 I4
 sg20
-S'ValueError: n must be >= 0\n'
+Nsg21
+S'print factorial(5)\n'
 p44
-sg21
-S'print factorial(-1)\n'
-p45
 sg9
 I20
 sg23
-S'Traceback (most recent call last):\n    ...\nValueError: n must be >= 0\n'
-p46
+S'120\n'
+p45
 sg25
-(dp47
+(dp46
 sba(idoctest
 Example
-p48
-(dp49
+p47
+(dp48
+g19
+I4
+sg20
+Nsg21
+S'print [factorial(long(n)) for n in range(6)]\n'
+p49
+sg9
+I22
+sg23
+S'[1, 1, 2, 6, 24, 120]\n'
+p50
+sg25
+(dp51
+sba(idoctest
+Example
+p52
+(dp53
+g19
+I4
+sg20
+Nsg21
+S'print factorial(30)\n'
+p54
+sg9
+I24
+sg23
+S'265252859812191058636308480000000\n'
+p55
+sg25
+(dp56
+sba(idoctest
+Example
+p57
+(dp58
+g19
+I4
+sg20
+Nsg21
+S'print factorial(30L)\n'
+p59
+sg9
+I26
+sg23
+S'265252859812191058636308480000000\n'
+p60
+sg25
+(dp61
+sba(idoctest
+Example
+p62
+(dp63
+g19
+I4
+sg20
+S'ValueError: n must be >= 0\n'
+p64
+sg21
+S'print factorial(-1)\n'
+p65
+sg9
+I28
+sg23
+S'Traceback (most recent call last):\n    ...\nValueError: n must be >= 0\n'
+p66
+sg25
+(dp67
+sba(idoctest
+Example
+p68
+(dp69
 g19
 I4
 sg20
 S'ValueError: n must be exact integer\n'
-p50
+p70
 sg21
 S'print factorial(30.1)\n'
-p51
+p71
 sg9
-I24
+I32
 sg23
 S'Traceback (most recent call last):\n    ...\nValueError: n must be exact integer\n'
-p52
+p72
 sg25
-(dp53
+(dp73
 sba(idoctest
 Example
-p54
-(dp55
+p74
+(dp75
 g19
 I4
 sg20
 Nsg21
 S'print factorial(30.0)\n'
-p56
+p76
 sg9
-I28
+I36
 sg23
 S'265252859812191058636308480000000\n'
-p57
+p77
 sg25
-(dp58
+(dp78
 sba(idoctest
 Example
-p59
-(dp60
+p79
+(dp80
 g19
 I4
 sg20
 S'OverflowError: n too large\n'
-p61
+p81
 sg21
 S'print factorial(1e100)\n'
-p62
+p82
 sg9
-I30
+I38
 sg23
 S'Traceback (most recent call last):\n    ...\nOverflowError: n too large\n'
-p63
+p83
 sg25
-(dp64
+(dp84
 sbasba(idoctest
 DocTest
-p65
-(dp66
+p85
+(dp86
 g3
 S'lab.find_age'
-p67
+p87
 sg5
 S'\n    Lab part 3\n\n    Fetch the age for a given person\'s name\n   \n    ------\n\n>>> print find_age(\'John\')\n21\n>>> print find_age(\'Carol\')\n18\n>>> print find_age(\'Jane\')\n35\n>>> print find_age(\'jane\')\nTraceback (most recent call last):\n  File "<stdin>", line 1, in <module>\n  File "lab1.py", line 114, in find_age\n    raise KeyError # not found!\nKeyError\n>>> print find_age(\'bobby\')\nTraceback (most recent call last):\n  File "<stdin>", line 1, in <module>\n  File "lab1.py", line 114, in find_age\n    raise KeyError # not found!\nKeyError\n    '
-p68
+p88
 sg7
 g8
 sg9
-I109
+I117
 sg10
-(lp69
+(lp89
 (idoctest
 Example
-p70
-(dp71
+p90
+(dp91
 g19
 I0
 sg20
 Nsg21
 S"print find_age('John')\n"
-p72
+p92
 sg9
 I7
 sg23
 S'21\n'
-p73
+p93
 sg25
-(dp74
+(dp94
 sba(idoctest
 Example
-p75
-(dp76
+p95
+(dp96
 g19
 I0
 sg20
 Nsg21
 S"print find_age('Carol')\n"
-p77
+p97
 sg9
 I9
 sg23
 S'18\n'
-p78
+p98
 sg25
-(dp79
+(dp99
 sba(idoctest
 Example
-p80
-(dp81
+p100
+(dp101
 g19
 I0
 sg20
 Nsg21
 S"print find_age('Jane')\n"
-p82
+p102
 sg9
 I11
 sg23
 S'35\n'
-p83
+p103
 sg25
-(dp84
+(dp104
 sba(idoctest
 Example
-p85
-(dp86
+p105
+(dp106
 g19
 I0
 sg20
 S'KeyError\n'
-p87
+p107
 sg21
 S"print find_age('jane')\n"
-p88
+p108
 sg9
 I13
 sg23
 S'Traceback (most recent call last):\n  File "<stdin>", line 1, in <module>\n  File "lab1.py", line 114, in find_age\n    raise KeyError # not found!\nKeyError\n'
-p89
+p109
 sg25
-(dp90
+(dp110
 sba(idoctest
 Example
-p91
-(dp92
+p111
+(dp112
 g19
 I0
 sg20
 S'KeyError\n'
-p93
+p113
 sg21
 S"print find_age('bobby')\n"
-p94
+p114
 sg9
 I19
 sg23
 S'Traceback (most recent call last):\n  File "<stdin>", line 1, in <module>\n  File "lab1.py", line 114, in find_age\n    raise KeyError # not found!\nKeyError\n'
-p95
-sg25
-(dp96
-sbasba(idoctest
-DocTest
-p97
-(dp98
-g3
-S'lab.slow_multiply'
-p99
-sg5
-S"\n    Lab part 2\n\n    Return the product of 'a' and 'b'\n   \n    ------\n\n>>> print slow_multiply(3, 5)\n15\n>>> print slow_multiply(5, 3)\n15\n>>> print slow_multiply(0, 1)\n0\n>>> print slow_multiply(0, 100)\n0\n>>> print slow_multiply(-1, 5)\n-5\n\n    "
-p100
-sg7
-g8
-sg9
-I77
-sg10
-(lp101
-(idoctest
-Example
-p102
-(dp103
-g19
-I0
-sg20
-Nsg21
-S'print slow_multiply(3, 5)\n'
-p104
-sg9
-I7
-sg23
-S'15\n'
-p105
-sg25
-(dp106
-sba(idoctest
-Example
-p107
-(dp108
-g19
-I0
-sg20
-Nsg21
-S'print slow_multiply(5, 3)\n'
-p109
-sg9
-I9
-sg23
-S'15\n'
-p110
-sg25
-(dp111
-sba(idoctest
-Example
-p112
-(dp113
-g19
-I0
-sg20
-Nsg21
-S'print slow_multiply(0, 1)\n'
-p114
-sg9
-I11
-sg23
-S'0\n'
 p115
 sg25
 (dp116
-sba(idoctest
-Example
+sbasba(idoctest
+DocTest
 p117
 (dp118
-g19
-I0
-sg20
-Nsg21
-S'print slow_multiply(0, 100)\n'
+g3
+S'lab.slow_multiply'
 p119
-sg9
-I13
-sg23
-S'0\n'
+sg5
+S"\n    Lab part 2\n\n    Return the product of 'a' and 'b'\n   \n    ------\n\n>>> print slow_multiply(3, 5)\n15\n>>> print slow_multiply(5, 3)\n15\n>>> print slow_multiply(0, 1)\n0\n>>> print slow_multiply(0, 100)\n0\n>>> print slow_multiply(-1, 5)\n-5\n\n    "
 p120
-sg25
-(dp121
-sba(idoctest
+sg7
+g8
+sg9
+I85
+sg10
+(lp121
+(idoctest
 Example
 p122
 (dp123
@@ -381,13 +381,81 @@ g19
 I0
 sg20
 Nsg21
-S'print slow_multiply(-1, 5)\n'
+S'print slow_multiply(3, 5)\n'
 p124
+sg9
+I7
+sg23
+S'15\n'
+p125
+sg25
+(dp126
+sba(idoctest
+Example
+p127
+(dp128
+g19
+I0
+sg20
+Nsg21
+S'print slow_multiply(5, 3)\n'
+p129
+sg9
+I9
+sg23
+S'15\n'
+p130
+sg25
+(dp131
+sba(idoctest
+Example
+p132
+(dp133
+g19
+I0
+sg20
+Nsg21
+S'print slow_multiply(0, 1)\n'
+p134
+sg9
+I11
+sg23
+S'0\n'
+p135
+sg25
+(dp136
+sba(idoctest
+Example
+p137
+(dp138
+g19
+I0
+sg20
+Nsg21
+S'print slow_multiply(0, 100)\n'
+p139
+sg9
+I13
+sg23
+S'0\n'
+p140
+sg25
+(dp141
+sba(idoctest
+Example
+p142
+(dp143
+g19
+I0
+sg20
+Nsg21
+S'print slow_multiply(-1, 5)\n'
+p144
 sg9
 I15
 sg23
 S'-5\n'
-p125
+p145
 sg25
-(dp126
+(dp146
 sbasba.

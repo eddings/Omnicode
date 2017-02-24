@@ -154,9 +154,11 @@ class Lab {
 		this.editorStatus = $('#editor-status');
 
 		// Console
-		this.console = $('#console');
+		this.consoleID = '#console';
+		this.console = $(this.consoleID);
 		this.consoleObj = null;
-		this.consoleClear = $('#console-clear');
+		this.consoleClearID = '#console-clear';
+		this.consoleClear = $(this.consoleClearID);
 
 		// Debugger
 		this.debuggerViewDiv = $('#debugger-view-div');
@@ -165,6 +167,20 @@ class Lab {
 		this.debugTraces = [];
 		this.debugStr = '';
 		this.debugStrLoc = {};
+
+		// Visual Debugger
+		this.visualDebuggerViewDivID = '#visual-debugger-view-div';
+		this.visualDebuggerViewDiv = $(this.visualDebuggerViewDivID);
+		this.graphicViewDivID = "#graphic-view-div";
+		this.tabularViewDivID = "#tabular-view-div";
+
+		this.elements = {};
+		this.elements[this.visualDebuggerViewDivID] = this.visualDebuggerViewDiv;
+		this.elements[this.consoleID] = this.console;
+		this.elements[this.consoleClearID] = this.consoleClear;
+
+		// Tabs
+		this.tabs = $("#tabs");
 
 		// Logged-in user data
 		this.userData = {};
@@ -197,9 +213,12 @@ class Lab {
 		this.runTestcaseID = "menu-run";
 		this.viewHintMenuIDDebug = "menu-view-a-hint-debug";
 		this.askQuestionMenuIDDebug = "menu-ask-a-question-debug";
+		this.saveTestcaseMenuID = "menu-testcase-save";
 		// Without debugging
 		this.viewHintMenuID = "menu-view-a-hint";
 		this.askQuestionMenuID = "menu-ask-a-question";
+		this.highlightOnSelectionMenuID = "menu-highlight-data";
+		this.dehighlightOnSelectionMenuID = "menu-dehighlight-data";
 
 		this.menuClickID = {checkpoint: -1, testcase: -1};
 
@@ -210,6 +229,29 @@ class Lab {
 								// set to 'null' for no debouncing
 		this.curText = '';
 
+		// Visible Testcase indices
+		this.visibleTestcaseIdx = [];
+
+		// History
+		this.history = [];
+		this.currentHistSelection = -1;
+
+		// Visualization
+		this.historySVGDivs = [];
+		this.historySVGs = [];
+		this.debugData = [];
+		this.isHighlightStrSelected = false;
+
+		// Code line highlights for point selection in the vis
+		this.prevHighlightedCodeLines = [];
+
+		// Mouse-up event 
+		this.isMouseupHighlightedLineIndices = [];
+		this.isMouseupHighlighted = false;
+
+		// To separate the first initialization call
+		//this.initialized = false;
+
 		this.init();
 	}
 
@@ -219,12 +261,92 @@ class Lab {
 		});
 	}
 
-	collectTestCaseSpans() {
+	initTabs() {
+		this.tabs.tabs();
+	}
+
+	// Dedup; this code is from author.js (public javascript)
+	addTestcaseClickEvent() {
+		$("a[id^='testcase-link']").each((i, el) => {
+			$(el).on("click", (e) => {
+				e.preventDefault();
+				// Remove previously selected element's visual indication
+				$("#testcase-link" + this.menuClickID.checkpoint + "-" + this.menuClickID.testcase).css("text-decoration", "none");
+
+				// Show some visual indication of "this" element being selected
+				$(el).css("text-decoration", "underline");
+
+				var nums = $(el).attr("id").split("testcase-link")[1].split("-");
+				var cp_idx = nums[0];
+				var tc_idx = nums[1];
+
+				this.menuClickID = {checkpoint: cp_idx, testcase: tc_idx};
+
+				// Hide the previously shown history of another testcase
+				if (this.visibleTestcaseIdx.length === 2) {
+					var hideID = "testcase-body" + this.visibleTestcaseIdx[0] + "-" + this.visibleTestcaseIdx[1];
+					$("#" + hideID).attr("style", "display: none;");
+				}
+
+				// Show the new history & store the current index of the history
+				var id = "testcase-body" + cp_idx + "-" + tc_idx;
+				$("#" + id).attr("style", "display: block;");
+				this.visibleTestcaseIdx = [cp_idx, tc_idx];
+				this.showHistory(cp_idx, tc_idx);
+
+				// Run this testcase
+				this.handleRunRequest(RUN_TEST_COMMAND, cp_idx, tc_idx);
+			});
+		});
+	}
+
+	addCreateCustomVisBtnHandler() {
+		$("button[id^='user-defined-vis-open-btn']").each((i, el) => {
+			$(el).on("click", (e) => {
+				e.preventDefault();
+				var nums = $(el).attr("id").split("user-defined-vis-open-btn")[1].split("-");
+				var cp_idx = nums[0];
+				var tc_idx = nums[1];
+
+				var xInputID = "x-var-input" + cp_idx + "-" + tc_idx;
+				var yInputID = "y-var-input" + cp_idx + "-" + tc_idx;
+
+				var xVarName = $("#" + xInputID).val();
+				var yVarName = $("#" + yInputID).val();
+				if (xVarName !== "" && yVarName !== "") {
+					this.createCustomVis(cp_idx, tc_idx, [xVarName, yVarName]);
+
+					// Show the close-the-vis button
+					$("#custom-vis-close" + cp_idx + "-" + tc_idx).css("display", "block");
+
+					// Show the vis pane
+					$("#user-defined-vis-div" + cp_idx + "-" + tc_idx).css("display", "block");
+
+					// Add the close-the-vis button click handler
+					$("#custom-vis-close" + cp_idx + "-" + tc_idx).on("click", (e) => {
+						e.preventDefault();
+						var nums = $(el).attr("id").split("user-defined-vis-open-btn")[1].split("-");
+						var cp_idx = nums[0];
+						var tc_idx = nums[1];
+
+						// Hide the created custom vis
+						$("#user-defined-vis-div" + cp_idx + "-" + tc_idx).css("display", "none");
+						// Hide the close button
+						$("#custom-vis-close" + cp_idx + "-" + tc_idx).css("display", "none");
+					});
+				} else {
+					$("#input-status" + cp_idx + "-" + tc_idx).html("Type in the variable names");
+				}
+			});
+		});
 	}
 
 	init() {
+		this.initTabs();
+		this.addTestcaseClickEvent();
+		this.addCreateCustomVisBtnHandler();
+
 		this.collectQuestionBtns();
-		this.collectTestCaseSpans();
 		this.collectQuestionModal();
 
 		this.addModalHandlers();
@@ -245,6 +367,9 @@ class Lab {
 
 		// Debouncing and auto code save + syntax error visualization
 		this.addContentChangeHandler();
+
+		// Add mouseup listener
+		this.addMouseupListener();
 
 		// Initialize the user status
 		this.initStatus();
@@ -448,6 +573,22 @@ class Lab {
 		$('#' + this.debugDehighlightMenuID).css('display', 'none');
 	}
 
+	showHighlightMenu() {
+		$("#" + this.highlightOnSelectionMenuID).css("display", "block");
+	}
+
+	hideHighlightMenu() {
+		$("#" + this.highlightOnSelectionMenuID).css("display", "none");
+	}
+
+	showDehighlightMenu() {
+		$("#" + this.dehighlightOnSelectionMenuID).css("display", "block");
+	}
+
+	hideDehighlightMenu() {
+		$("#" + this.dehighlightOnSelectionMenuID).css("display", "none");
+	}
+
 	addModalBackgroundClickHandler() {
 		/* Dismiss the question modal when the background is clicked */
 		// TODO: TEST
@@ -462,18 +603,22 @@ class Lab {
 		};
 	}
 
-	////////////////////////////////////
-	// Highlight all the syntax errors
-	////////////////////////////////////
-	highlightSyntaxErrors(errorRanges) {
+	highlightErrorGutters(errorRanges) {
 		var errorIndicationStyle = 'redGutter';
+
 		// Remove previous gutter highlights (squiggly lines are removed when the editor content is changed)
-		this.prevSyntaxErrorRanges.forEach((range, idx) => {
-			this.editor.session.removeGutterDecoration(range.start.row, errorIndicationStyle);
-		});
-		// Add new gutter highlights and squiggly lines
+		//this.prevSyntaxErrorRanges.forEach((range, idx) => {
+		//	this.editor.session.removeGutterDecoration(range.start.row, errorIndicationStyle);
+		//});
+
+		// Add new gutter highlights
 		errorRanges.forEach((range, idx) => {
 			this.editor.session.addGutterDecoration(range.start.row, errorIndicationStyle);
+		});
+	}
+
+	addSquigglyLines(errorRanges) {
+		errorRanges.forEach((range, idx) => {
 			this.prevErrorMarkers.push(
 				{
 					id: this.editor.session.addMarker(
@@ -482,9 +627,16 @@ class Lab {
 						"text"),
 					startLine: range.start.row,
 					endLine: range.end.row
-				});
+				}
+			);
 		});
-
+	}
+	////////////////////////////////////
+	// Highlight all the syntax errors
+	////////////////////////////////////
+	highlightSyntaxErrors(errorRanges) {
+		this.highlightErrorGutters(errorRanges);
+		this.addSquigglyLines(errorRanges);
 		this.prevSyntaxErrorRanges = errorRanges;
 	}
 
@@ -496,9 +648,9 @@ class Lab {
 	colorCommentedOutFunctions(commentedFuncRanges) {
 		var commentIndicationStyle = 'greyGutter';
 		// Remove previous gutter highlights
-		this.prevCommentRows.forEach((row, idx) => {
-			this.editor.session.removeGutterDecoration(row, commentIndicationStyle);
-		});
+		//this.prevCommentRows.forEach((row, idx) => {
+		//	this.editor.session.removeGutterDecoration(row, commentIndicationStyle);
+		//});
 
 		// Unroll the comment function ranges into row indices
 		var commentRows = [];
@@ -663,7 +815,737 @@ class Lab {
 		this.showDebugger();
 	}
 
-	sendRunRequeset(URL, dataObj, mode) {
+	////////////////////////////////////////////
+	// Hides or shows a jquery element given the
+	// ID
+	////////////////////////////////////////////
+	view(elementID, command = 'show') {
+		var elem = this.elements[elementID];
+		if (elem) {
+			if (command === 'show') {
+				elem.css('display', 'block');	
+			} else if (command === 'hide') {
+				elem.css('display', 'none');
+			}
+		}
+	}
+
+	/////////////////////////////////////////////////////
+	// Add button click handlers for the visualization
+	// div
+	/////////////////////////////////////////////////////
+	addVisBtnHandlers() {
+		var visualDebuggerViewDivID = 'visual-debugger-view-div';
+		var graphicViewDivID = 'graphic-view-div';
+		var closeBtnID = 'vis-close';
+
+		$('#' + closeBtnID).on('click', (e) => {
+			e.preventDefault();
+			$('#' + visualDebuggerViewDivID).remove();
+		});
+	}
+
+	/////////////////////////////////////////////////////
+	// Insert and reserve space for the visual debugger
+	// pane
+	/////////////////////////////////////////////////////
+	insertVisualDebuggerViewDiv(checkpoint, testcase, varPairsLen) {
+		// Remove the previously existing #visual-debugger-view-div
+		if ($('#visual-debugger-view-div')) { $('#visual-debugger-view-div').remove(); }
+
+		var testcaseHTMLDivID = '#testcase-html-div' + checkpoint + '_' + testcase;
+		var testcaseHTMLDiv = $(testcaseHTMLDivID);
+		var html = '<div id="visual-debugger-view-div">\
+						<span class="vis-close" id="vis-close">&times;</span>\
+						<div class="container" id="graphic-view-div"></div>\
+					</div>';
+		testcaseHTMLDiv.append(html);
+		
+		html = '<div class="row" style="inline-block;">\
+					<div class="col-6" id="whole-vis-div">\
+					</div>\
+				</div>';
+		$('#graphic-view-div').append(html);
+
+		html = '<div class="row" style="inline-block;">\
+					<div class="col-12" id="cross-vis-div">\
+					</div>\
+				</div>';
+		$('#graphic-view-div').append(html);
+
+		// Add close button interactivity
+		this.addVisBtnHandlers();
+	}
+
+	/////////////////////////////////////////
+	// Create a data object for visualization
+	/////////////////////////////////////////
+	createDebugVizData(trace) {
+		var dataArray = [];
+		var localVarNames = new Set();
+		trace.forEach((t, i) => {
+			var orderedGlobals = t['ordered_globals'];
+			if (!orderedGlobals) {
+				if (t['event'] === 'uncaught_exception') {
+					return dataArray;
+				}
+			}
+
+			var stackFs = t['stack_to_render']; // Array of stack frames to render
+			if (stackFs) {
+				stackFs.forEach((f, j) => {
+					var encodedLocalNames = Object.keys(f['encoded_locals']);
+					var stackObj = {};
+					encodedLocalNames.forEach((name, k) => {
+						var obj = {};
+						if (!isNaN(f['encoded_locals'][name])) {
+							obj['@value'] = f['encoded_locals'][name];
+							obj['@name'] = name;
+							stackObj[name] = f['encoded_locals'][name];
+							localVarNames.add(name);
+						}
+						obj['@execution_step'] = i;
+						obj['@executed_code'] = this.editor.session.getLine(t['line'] - 1);
+						obj['@line number'] = t['line'];
+						dataArray.push(obj); // each local variable found is stored as an object that
+											 // contains @value and @name fields
+					});
+					stackObj['@execution_step'] = i;
+					stackObj['@executed_code'] = this.editor.session.getLine(t['line'] - 1);
+					stackObj['@line number'] = t['line'];
+					dataArray.push(stackObj); // all of local variables found are stored together in
+										 	  // an object
+				});
+			}
+		});
+		return {dataArray: dataArray, localVarNames: localVarNames};
+	}
+
+	cross(a, b) {
+	  var c = [], n = a.length, m = b.length, i, j;
+	  for (i = -1; ++i < n;) for (j = -1; ++j < m;) c.push({x: a[i], i: i, y: b[j], j: j});
+	  return c;
+	}
+
+	exclusiveCross(a, b) {
+		return [{x: a[0], i: 0, y: b[0], j: 0}];
+	}
+
+	//////////////////////////////////////
+	// Creates a custom visualization
+	// using the debug data stored and
+	// x- and y-axis variable names
+	//////////////////////////////////////
+	createCustomVis(cp_idx, tc_idx, varNames) {
+		var data = this.debugData.dataArray;
+		var varData = Array.from(this.debugData.localVarNames);
+		varData.push("@line number");
+		varData.push("@execution_step");
+
+		var padding = 20,
+			width = 300,
+			height = 300;
+
+		var x = d3.scale.linear()
+		    .range([padding / 2, width - padding / 2]);
+
+		var y = d3.scale.linear()
+		    .range([height - padding / 2, padding / 2]);
+
+		var xAxis = d3.svg.axis()
+		    .scale(x)
+		    .orient("bottom")
+		    .ticks(6);
+
+		var yAxis = d3.svg.axis()
+		    .scale(y)
+		    .orient("left")
+		    .ticks(6);
+
+		var domainByVarName = {};
+		varNames.forEach(function (name) {
+			var tmpDomain = d3.extent(data, function(d) { return d[name]; });
+			if (tmpDomain[0] === tmpDomain[1]) { // If there's only value in the domain, extend it
+												 // by including its -1 and +1 values
+				domainByVarName[name] = [tmpDomain[0] - 1, tmpDomain[1] + 1];
+			} else {
+				domainByVarName[name] = tmpDomain;
+			}
+		});
+
+		// Remove the old SVG
+		d3.select("#user-defined-vis-div-svg" + cp_idx + "-" + tc_idx).remove();
+
+		// Create a new one
+		var svg = d3.select("#user-defined-vis-div" + cp_idx + "-" + tc_idx)
+				    .append("svg")
+				    .attr("id", () => { return "user-defined-vis-div-svg" + cp_idx + "-" + tc_idx; })
+					.attr("width", width + 2 * padding)
+					.attr("height", height + 2 * padding)
+					.attr("transform", function(d, i) { return "translate(" + padding + "," + padding +")"; });
+
+		// Clear the previously-active brush, if any.
+		function brushstart(p) {
+			if (brushCell !== this) {
+				d3.select(brushCell).call(brush.clear());		
+				x.domain(domainByVarName[p.x]);		
+				y.domain(domainByVarName[p.y]);		
+				brushCell = this;		
+			}
+		}
+
+		var brush = d3.svg.brush()		
+		    .x(x)		
+		    .y(y)		
+		    .on("brushstart", brushstart)
+		    .on("brush", (p) => { // Highlight the selected circles.
+				var e = brush.extent();
+				var brushedCircleLines = new Set();
+				svg.selectAll("circle").classed("hidden", function(d) {
+					if (e[0][0] > d[p.x] || d[p.x] > e[1][0]
+					|| e[0][1] > d[p.y] || d[p.y] > e[1][1]) {
+						return true;
+					}
+
+					brushedCircleLines.add(d["@line number"])
+					return false;
+				});
+
+				this.removeMouseupGutterHighlights();
+				this.highlightCodeLines(Array.from(brushedCircleLines));
+		    })
+		    .on("brushend", () => { // If the brush is empty, select all circles.
+		    	if (brush.empty()) {
+		    		svg.selectAll(".hidden").classed("hidden", false);
+		    		this.removeMouseupGutterHighlights();
+		    		this.dehighlightPrevCodeLinesInDiffView();
+		    	}
+		    });
+
+		svg.selectAll(".x.axis")
+			.data([varNames[0]]) // x var
+		.enter().append("g")
+			.attr("class", "x axis")
+			.attr("transform", function(d, i) { return "translate(0," + height + ")"; })
+			.each(function(d) { x.domain(domainByVarName[d]); d3.select(this).call(xAxis); });
+
+		svg.selectAll(".y.axis")
+			.data([varNames[1]]) // y var
+		.enter().append("g")
+			.attr("class", "y axis")
+			.attr("transform", function(d, i) { return "translate(" + padding + ",0)"; })
+			.each(function(d) { y.domain(domainByVarName[d]); d3.select(this).call(yAxis); });
+
+		var cell = svg.selectAll(".cell")
+			.data(this.exclusiveCross(varNames, varNames))
+		.enter().append("g")
+			.attr("class", "cell")
+			.attr("transform", function(d, i) { return "translate(" + padding + ",0)"; })
+
+		var xVar = varNames[0];
+		var yVar = varNames[1];
+		cell.call(brush); // add brushing
+		cell.each(plot); // draw chart -- !important: this should be placed after the brush call
+		cell.selectAll("circle")
+		    .on("mouseover", function() {
+		    	return tooltip.style("visibility", "visible");
+		    })
+	  		.on("mousemove", (d) => {
+	  			var cell = d3.select(this);
+	  			var coordinates = d3.mouse(svg.node()); // position relative to the svg element
+	  			
+	  			tooltip.html("<p><strong>" + xVar + ": " + d[xVar] + "</strong></p><p><strong>" + yVar + ": " + (d[yVar] + 1) + "</strong></p>");
+
+	  			this.removeMouseupGutterHighlights();
+	  			this.highlightCodeLines([d["@line number"]]);
+
+	  			return tooltip.style("top", (coordinates[1] + 500) + "px")
+	  						  .style("left", coordinates[0] + "px");
+	  		})
+	  		.on("mouseout", () => {
+	  			this.removeMouseupGutterHighlights();
+	  			return tooltip.style("visibility", "hidden");
+	  		});
+
+		var svgContainer = d3.select("#user-defined-vis-div" + cp_idx + "-" + tc_idx);
+		var tooltip = svgContainer.append("div")
+							  		.style("position", "absolute")
+							  		.style("z-index", "1001")
+							  		.style("visibility", "hidden");
+
+		var brushCell;
+
+		function plot(p) {
+			var cell = d3.select(this);
+
+			x.domain(domainByVarName[p.x]);
+			y.domain(domainByVarName[p.y]);
+
+			cell.append("rect")
+			    .attr("class", "frame")
+			    .attr("x", padding / 2)
+			    .attr("y", padding / 2)
+			    .attr("width", width - padding)
+			    .attr("height", height - padding)
+			    .style("pointer-events", "none");
+
+			cell.selectAll("circle")
+			    .data(data)
+			  .enter().append("circle")
+			  .filter(function(d) { return d[p.x] && d[p.y]; })
+			    .attr("cx", function(d) { return x(d[p.x]); })
+			    .attr("cy", function(d) { return y(d[p.y]); })
+			    .attr("r", 2)
+			    .style("fill", d3.rgb(255,127,80,0.2));
+		}
+	}
+
+	//////////////////////////////////////
+	// Create the scatterplot matrix vis
+	//////////////////////////////////////
+	createVis(debugData, otherDebugData, cp_idx, tc_idx) {
+		// Deep copy object arrays. Transform it to
+		// be able to differentiate between the current
+		// run's and the other run's data
+		var dataArr1 = debugData.dataArray.map((el, i) => {
+			return JSON.parse(JSON.stringify(el));
+		});
+		var dataArr2 = otherDebugData.dataArray.map((el, i) => {
+			return JSON.parse(JSON.stringify(el));
+		});
+
+		var data1 = dataArr1.map((el, i) => {
+			if (el["@current"] === undefined) el["@current"] = true;
+			return el;
+		});
+		var data2 = dataArr2.map((el, i) => {
+			if (el["@current"] === undefined) el["@current"] = false;
+			return el;
+		});
+
+		// Trick to maintain the color saliency of rendering; if we have
+		// the display of data of another run overlaid, we want to maintain
+		// the color mapping of (blue: another run result, orange: this run result)
+		//var data = data2.concat(data1);
+		var data = data2.concat(data1);
+
+		// If the student changed the variable names...
+		var varDataSet1 = debugData.localVarNames;
+		var varDataSet2 = otherDebugData.localVarNames;
+		var varData = Array.from(new Set(function*() { yield* varDataSet1; yield* varDataSet2; }()));
+		varData.push("@line number");
+		varData.push("@execution_step");
+
+		var width = 780,
+			height = 780,
+			padding = 20,
+		    size = (width - 2 * padding) / varData.length;
+		
+		var x = d3.scale.linear()
+		    .range([padding / 2, size - padding / 2]);
+
+		var y = d3.scale.linear()
+		    .range([size - padding / 2, padding / 2]);
+
+		var xAxis = d3.svg.axis()
+		    .scale(x)
+		    .orient("bottom")
+		    .ticks(6);
+
+		var yAxis = d3.svg.axis()
+		    .scale(y)
+		    .orient("left")
+		    .ticks(6);
+
+		var color = d3.scale.category10();
+
+		var domainByVarName = {},
+			varNames = d3.values(varData),
+			n = varData.length;
+
+		varData.forEach(function (name) {
+			var tmpDomain = d3.extent(data, function(d) { return d[name]; });
+			if (tmpDomain[0] === tmpDomain[1]) { // If there's only value in the domain, extend it
+												 // by including its -1 and +1 values
+				domainByVarName[name] = [tmpDomain[0] - 1, tmpDomain[1] + 1];
+			} else {
+				domainByVarName[name] = tmpDomain;
+			}
+		});
+
+		xAxis.tickSize(size * n);
+		yAxis.tickSize(-size * n);
+		
+		// Remove the old SVG
+		d3.select("#cross-vis-div-svg" + cp_idx + "-" + tc_idx).remove();
+
+		// Create a new one
+		var svg = d3.select("#cross-vis-div" + cp_idx + "-" + tc_idx)
+				    .append("svg")
+				    .attr("id", () => { return "cross-vis-div-svg" + cp_idx + "-" + tc_idx; })
+					.attr("width", width)
+					.attr("height", height)
+					.append("g")
+					.attr("transform", "translate(" + padding + "," + padding + ")");
+
+		var brush = d3.svg.brush()		
+		    .x(x)		
+		    .y(y)		
+		    .on("brushstart", brushstart)
+		    .on("brush", (p) => { // Highlight the selected circles.
+				var e = brush.extent();
+				var brushedCircleLines1 = new Set();
+				var brushedCircleLines2 = new Set();
+				svg.selectAll("circle").classed("hidden", function(d) {
+					// NOTE: e[0][0] = x0, e[0][1] = y0, e[1][0] = x1, e[1][1] = y1,
+					// where [x0, y0] is the top-left corner
+					// and [x1, y1] is the bottom-right corner
+					if (e[0][0] > d[p.x] || d[p.x] > e[1][0]
+					|| e[0][1] > d[p.y] || d[p.y] > e[1][1]) {
+						// Hide the circles
+						return true;
+					}
+
+					d["@current"] ? brushedCircleLines1.add(d["@line number"])
+								  : brushedCircleLines2.add(d["@line number"]);
+					return false;
+				});
+
+				this.removeMouseupGutterHighlights();
+				this.highlightCodeLines(Array.from(brushedCircleLines1));
+				this.highlightCodeLinesInDiffView(Array.from(brushedCircleLines2));
+		    })
+		    .on("brushend", () => { // If the brush is empty, select all circles.
+		    	if (brush.empty()) {
+		    		svg.selectAll(".hidden").classed("hidden", false);
+		    		this.removeMouseupGutterHighlights();
+		    		this.dehighlightPrevCodeLinesInDiffView();
+		    	}
+		    });
+
+		svg.selectAll(".x.axis")
+			.data(varNames)
+		.enter().append("g")
+			.attr("class", "x axis")
+			.attr("transform", function(d,i) { return "translate(" + (n - i - 1) * size + ",0)"; })
+			.each(function(d) { x.domain(domainByVarName[d]); d3.select(this).call(xAxis); });
+
+		svg.selectAll(".y.axis")
+			.data(varNames)
+		.enter().append("g")
+			.attr("class", "y axis")
+			.attr("transform", function(d, i) { return "translate(0," + i * size + ")"; })
+			.each(function(d) { y.domain(domainByVarName[d]); d3.select(this).call(yAxis); });
+
+		var cell = svg.selectAll(".cell")
+					.data(this.cross(varNames, varNames))
+				.enter().append("g")
+					.filter(function(d) { return d.i > d.j; })
+					.attr("class", "cell")
+					.attr("transform", function(d) { return "translate(" + (n - d.i - 1) * size + "," + d.j * size + ")"; });
+
+		// y axis labels
+		cell.filter(function(d) { console.log(d.i, d.j); return (d.i - d.j) === 1; })
+			.append("text")
+			.attr("x", function(d, i) { return d.i * size + padding; })
+			.attr("y", function(d, i) { return size / 2; })
+			.attr("dy", ".71em")
+			.text(function(d) { return d.y; });
+
+		// x axis labels
+		cell.filter(function(d) { return (d.i - d.j) === 1; })
+			.append("text")
+			.attr("x", function(d, i) { return padding; })
+			.attr("y", function(d, i) { return (n - 1 - d.j) * size + padding; })
+			.attr("dy", ".71em")
+			.text(function(d) { return d.x; });
+
+		cell.call(brush);
+		cell.each(plot);
+		cell.selectAll("circle")
+		    .on("mouseover", function() {
+		    	return tooltip.style("visibility", "visible");
+		    })
+	  		.on("mousemove", (d) => {
+	  			var cell = d3.select(this);
+	  			//console.log(d);
+	  			//console.log(cell.data()[0]);
+	  			//var x = cell.data()[0].x;
+	  			//var y = cell.data()[0].y;
+	  			//var translate = d3.transform(cell.attr("transform")).translate;
+	  			var coordinates = d3.mouse(svg.node()); // position relative to the svg element
+	  			
+	  			tooltip.html("<p><strong>Execution Step" + ": " + d["@execution_step"] + "</strong></p><p><strong>Code line: " + d["@line number"] + "</strong></p>");
+	  			this.removeMouseupGutterHighlights();
+	  			d["@current"] ? this.highlightCodeLines([d["@line number"]])
+	  						  : this.highlightCodeLinesInDiffView([d["@line number"]]);
+
+	  			return tooltip.style("top", (coordinates[1] + 500) + "px")
+	  						  .style("left", coordinates[0] + "px");
+	  		})
+	  		.on("mouseout", () => {
+	  			this.removeMouseupGutterHighlights();
+	  			this.dehighlightPrevCodeLinesInDiffView();
+	  			return tooltip.style("visibility", "hidden");
+	  		});
+
+		var svgContainer = d3.select("#cross-vis-div" + cp_idx + "-" + tc_idx);
+		var tooltip = svgContainer.append("div")
+								  .style("position", "absolute")
+								  .style("z-index", "1001")
+								  .style("visibility", "hidden");
+
+		var brushCell;
+
+		function plot(p) {
+			var cell = d3.select(this);
+
+			x.domain(domainByVarName[p.x]);
+			y.domain(domainByVarName[p.y]);
+
+			cell.append("rect")
+			    .attr("class", "frame")
+			    .attr("x", padding / 2)
+			    .attr("y", padding / 2)
+			    .attr("width", size - padding)
+			    .attr("height", size - padding)
+			    .style("pointer-events", "none");
+
+			// Cross for other data
+			cell.selectAll("path")
+			    .data(data)
+			  .enter().append("path")
+			  .filter(function(d) { return d[p.x] && d[p.y] && !d["@current"]; })
+			  	.attr("d", d3.svg.symbol()
+			  		.size(function(d) { return 5 * 5; }) // size in square pixels
+			  		.type(function(d) { return "diamond"; }))
+			  	.attr("transform", function(d) { return "translate(" + x(d[p.x]) + "," + y(d[p.y]) +")"; })
+			    .style("fill", function(d) { return d3.rgb(82,209,255,0.2); });
+
+			// Dot for current data
+			cell.selectAll("circle")
+			    .data(data)
+			  .enter().append("circle")
+			  .filter(function(d) { return d[p.x] && d[p.y] && d["@current"]; })
+			    .attr("cx", function(d) { return x(d[p.x]); })
+			    .attr("cy", function(d) { return y(d[p.y]); })
+			    .attr("r", 2)
+			    .style("fill", function(d) { return d3.rgb(255,127,80,0.2); });
+		}
+
+		// Clear the previously-active brush, if any.
+		function brushstart(p) {
+			if (brushCell !== this) {		
+				d3.select(brushCell).call(brush.clear());		
+				x.domain(domainByVarName[p.x]);		
+				y.domain(domainByVarName[p.y]);		
+				brushCell = this;		
+			}		
+		}
+	}
+
+	dehighlightPrevCodeLinesInDiffView() {}
+
+	highlightCodeLines(lineNumbers) {
+		this.addMouseupGutterHighlights(lineNumbers.map((v, i) => v - 1));
+	}
+
+	highlightCodeLinesInDiffView(lineNumbers) {}
+
+	displayDiffCodePanelContent(codeStr) {
+		$("#diff-code-panel-title").attr("style", "display: block;");
+		$("#diff-code-panel").attr("style", "display: block;");
+		$("#diff-code-panel").html(
+			"<pre id='diff-code-panel-pre' style='line-hight: 1;'>"
+				+ codeStr
+			+ "</pre>");
+
+		// For line-numbered <pre> elements
+	    var pre = document.getElementById("diff-code-panel-pre");
+        pre.innerHTML = '<span class="line-number"></span>' + pre.innerHTML + '<span class="cl"></span>';
+        var num = pre.innerHTML.split(/\n/).length;
+        for (let i = -1; ++i < num;) {
+            var line_num = pre.getElementsByTagName('span')[0];
+            line_num.innerHTML += '<span>' + (i + 1) + '</span>';
+        }
+	}
+
+	temp () {
+		/*
+		var padding = 20,
+			width = screen.width - 500 - 500 - 2 * padding,
+			height = 50;
+		this.historySVGs[cp_i][tc_i] = d3.select("#history" + cp_i + "-" + tc_i).append("svg")
+											.attr("width", width) // padding 40
+											.attr("height", height);
+		var svg = this.historySVGs[cp_i][tc_i],
+			g = svg.append("g")
+					.attr("transform", "translate(" + padding + "," + padding + ")"),
+			r = 6,
+			dist = 8,
+			n = Math.floor((this.historySVGs[cp_i][tc_i].attr("width") - dist) / (r * 2 + dist));
+
+		var x = d3.scale.linear()
+		    .domain([1, n])
+		    .range([0, width]);
+
+		var y = d3.scale.linear()
+		    .domain([0])
+		    .range([height, 0]);
+
+		var circle = d3.svg.symbol()
+						.size(function(d) { return r * r; })
+						.type(function(d) { return "circle"; }),
+			data = this.history[cp_i][tc_i];
+
+		if (data.length < n) data.push(newData);
+
+		g.append("defs").append("clipPath")
+			.attr("id", "clip")
+		 .append("rect")
+		 	.attr("width", width)
+		 	.attr("height", height);
+
+		var xAxis = d3.svg.axis()
+		    .scale(x)
+		    .orient("bottom");
+
+		var yAxis = d3.svg.axis()
+		    .scale(y)
+		    .orient("left");
+
+		g.append("g")
+			.attr("class", "axis axis--x")
+			//.attr("transform", "translate(0," + y(0) + ")")
+			.call(xAxis);
+
+		g.append("g")
+			.attr("class", "axis axis--y")
+			.call(yAxis);
+
+		g.append("g")
+			.attr("clip-path", "url(#clip)")
+		 .append("path")
+		 	.datum(data)
+		 	.filter(function(d) { console.log(d); return false; })
+		 	.attr("class", "circle")
+		 .transition()
+		 	.duration(500)
+		 	.ease("linear")
+		 	.on("start", () => { draw(newData); });
+
+		function draw(newData) {
+			data.push(newData);
+
+			// Redraw the circle
+			d3.select(this)
+				.attr("d", circle)
+				.style("fill", function(d) {
+					return d.result ? d3.rgb(51,255,51) : d3.rgb(255,51,51);
+				})
+				.attr("transform", null);
+
+			d3.active(this)
+				.attr("transform", "translate(" + x(-1) + ",0)")
+			  .transition();
+
+			data.shift();
+		}
+		*/		
+	}
+	
+	updateHistory(cp_i, tc_i, newData) {
+		this.history[cp_i][tc_i].push(newData);
+
+		this.historySVGs[cp_i][tc_i].selectAll("circle")
+			.data(this.history[cp_i][tc_i]).enter()
+			.append("circle")
+			.attr("r", 6)
+			.attr("cx", (d) => { return this.history[cp_i][tc_i].length * (6 + 14); })
+			.attr("cy", (d) => { return 5; })
+			.style("fill", (d) => {
+				return d.result ? d3.rgb(51,255,51) : d3.rgb(255,51,51);
+			})
+			.on("mouseover", (d, i) => {
+				this.historySVGs[cp_i][tc_i].append("line")
+											.attr("x1", (i + 1) * (6 + 14) - 6)
+											.attr("y1", 22)
+											.attr("x2", (i + 1) * (6 + 14) + 6)
+											.attr("y2", 22)
+											.attr("stroke-width", 3)
+											.attr("stroke", "grey");
+			})
+			.on("mouseout", (d, i) => {
+				this.historySVGs[cp_i][tc_i].selectAll("line").remove();
+			})
+			.on("click", (d, i) => {
+				if (this.currentHistSelection !== i) {
+					this.currentHistSelection = i;
+					// Remove existing circles
+					this.historySVGs[cp_i][tc_i].selectAll("circle.clicked").remove();
+					this.historySVGs[cp_i][tc_i].append("circle")
+												.attr("class", "clicked")
+												.attr("r", 10)
+												.attr("cx", (i + 1) * (6 + 14))
+												.attr("cy", 5)
+												.attr("stroke-width", 2)
+												.attr("stroke", "grey")
+												.style("fill", "none");	
+					this.createVis(this.debugData, d, cp_i, tc_i);
+					this.displayDiffCodePanelContent(diffString(d.code, this.debugData.code));
+				} else {
+					// Clicked the same history again -- remove it
+					this.currentHistSelection = -1; // set it to an initial value to enable the same selection again
+					this.historySVGs[cp_i][tc_i].selectAll("circle.clicked").remove();
+					this.createVis(this.debugData, {dataArray: [], localVarNames: []}, cp_i, tc_i);
+
+					// Hide the panel and the title
+					$("#diff-code-panel-title").attr("style", "display: none;");
+					$("#diff-code-panel").attr("style", "display: none;");
+				}
+			});
+	}
+
+	showHistory(cp_i, tc_i) {
+		if (this.prevShownHistoryIdx && this.prevShownHistoryIdx.length === 2) {
+			var _cp_i = this.prevShownHistoryIdx[0];
+			var _tc_i = this.prevShownHistoryIdx[1];
+			this.historySVGDivs[_cp_i][_tc_i].attr("style", "display: none;");
+		}
+		this.historySVGDivs[cp_i][tc_i].attr("style", "display: block;");
+		this.prevShownHistoryIdx = [cp_i, tc_i];
+	}
+
+	handleVisualDebugRequest(mode, checkpoint, testcase, result) {
+		if (mode === RUN_TEST_COMMAND) {
+			if (checkpoint < 0 || testcase < 0) {
+				return this.postWarningNotificationModal({
+						msg: 'Invalid test case'
+				});
+			}
+
+			if (!this.runResults                     			// Sanity checks. Should pass after proper initialization
+				|| !this.runResults[checkpoint]          		//
+				|| !this.runResults[checkpoint][testcase]  		//
+				|| !this.runResults[checkpoint][testcase][0]) 	// This is set only after an actual run of the testcase
+			{
+				return this.postWarningNotificationModal({
+					msg: 'Run the test case first'
+				});
+			}
+		}
+
+		this.debugData = this.createDebugVizData(this.runResults[checkpoint][testcase][0]);
+		console.log(this.debugData);
+		this.createVis(this.debugData, {dataArray: [], localVarNames: []}, checkpoint, testcase);
+
+		//this.showHistory(checkpoint, testcase);
+		this.debugData["result"] = result;
+		this.debugData["code"] = this.editorObj.code;
+		//this.updateHistory(checkpoint, testcase, this.debugData);
+	}
+
+	sendRunRequestAndVisualize(URL, dataObj, mode, checkpoint_idx, testcase_idx) {
 		$.post({
 			url: URL,
 			data: JSON.stringify(dataObj),
@@ -674,12 +1556,15 @@ class Lab {
 				}, 2000);
 
 				var json = JSON.parse(data);
+				console.log(json);
 
 				// Set gutter highlight (red) to indicate syntax error
-				this.highlightSyntaxErrors(json.syntaxErrorRanges);
+				//this.highlightSyntaxErrors(json.syntaxErrorRanges);
 
 				// Set gutter highlight (yellow) to indicate commented function ranges
-				this.colorCommentedOutFunctions(json.commentedFuncRanges);
+				//this.colorCommentedOutFunctions(json.commentedFuncRanges);
+
+				var correct = false;
 
 				// Either the result contains the entire result
 				// or the specific one.
@@ -694,11 +1579,18 @@ class Lab {
 							} else if (this.runResults[cp_idx][testcase_idx][0][traceLen-1]["event"] === "exception") {
 								result = this.runResults[cp_idx][testcase_idx][0][traceLen-1]["exception_msg"];
 							}
+
+							// Update with the result value
+							// The run result in the testcase html
+							$('#testcase-run-result' + cp_idx + '_' + testcase_idx).html('<b>Run result:</b> ' + result);
 							var testcaseResImg = $('#case' + cp_idx + '_' + testcase_idx);
-							if (testcase.want === result) {
+							var testcaseResImgInLink = $("#testcase-result" + cp_idx + "-" + testcase_idx);
+							if (correct = (testcase.want === result)) {
 								testcaseResImg.attr('src', '../images/success.png');
+								testcaseResImgInLink.attr("src", "../images/success.png");
 							} else {
 								testcaseResImg.attr('src', '../images/error.png');
+								testcaseResImgInLink.attr("src", "../images/error.png");
 							}
 						});
 					});					
@@ -716,15 +1608,26 @@ class Lab {
 						result = this.runResults[cp_idx][testcase_idx][0][traceLen-1]["exception_msg"];
 					}
 
+					console.log(traceLen, result);
+					// Update with the result value
+					$('#testcase-run-result' + cp_idx + '_' + testcase_idx).html('<b>Run result:</b> ' + result);
+
 					// Update the status image
+					var testcase = this.checkpoints[cp_idx].testCases[testcase_idx];										
 					var testcaseResImg = $('#case' + cp_idx + '_' + testcase_idx);
-					var testcase = this.checkpoints[cp_idx].testCases[testcase_idx];
-					if (testcase.want === result) {
+					var testcaseResImgInLink = $("#testcase-result" + cp_idx + "-" + testcase_idx);
+					if (correct = (testcase.want === result)) {
 						testcaseResImg.attr('src', '../images/success.png');
+						testcaseResImgInLink.attr("src", "../images/success.png");
 					} else {
 						testcaseResImg.attr('src', '../images/error.png');
+						testcaseResImgInLink.attr("src", "../images/error.png");
 					}
 				}
+
+				// Visualization function
+				this.handleVisualDebugRequest(mode, checkpoint_idx, testcase_idx, correct);
+
 				//this.consoleObj.Write(res + '\n', 'jqconsole-output');
 			},
 			error: (req, status, err) => {
@@ -754,7 +1657,7 @@ class Lab {
 			this.editorStatus.html("Runnig a single test ... ");
 		}
 
-		this.sendRunRequeset(URL, dataObj, mode);
+		this.sendRunRequestAndVisualize(URL, dataObj, mode, checkpoint, testcase);
 		this.showConsole();
 		this.editorStatus.css('display', 'inline');
 	}
@@ -823,6 +1726,7 @@ class Lab {
 
 	createDebugTrace(trace) {
 		// Take the JSON string data and create it into an array of info
+		console.log(trace);
 		var executionText = '';
 		var executionTraces = [];
 		for (let i = 0; i < trace.length; ++i) {
@@ -910,12 +1814,18 @@ class Lab {
 	}
 
 	removeMarkersInEditorSelection() {
-		var editLine = this.editor.getSelectionRange().start.row;
+		//var editLine = this.editor.getSelectionRange().start.row;
+
 		// If the edited content's line no. overlaps with any of the lines of the
 		// previously created error, remove squiggly lines in those lines
+		// --> Change: remove squiggly lines when the edited content's line no.
+		//             is before the error line no.
+		// --> Change: remove all squiggly lines in the code editor as soon as its
+		//             content has been changed
 		var idx = 0;
 		while (idx < this.prevErrorMarkers.length) {
 			var marker = this.prevErrorMarkers[idx];
+/*
 			if (marker.startLine <= editLine
 				&& editLine <= marker.endLine) {
 				this.editor.session.removeMarker(marker.id);
@@ -923,7 +1833,32 @@ class Lab {
 			} else {
 				idx++;
 			}
-		}		
+*/
+/*
+			if (editLine <= marker.startLine) {
+				this.editor.session.removeMarker(marker.id);
+				this.prevErrorMarkers.splice(idx, 1);
+			} else {
+				idx++;
+			}
+*/
+			this.editor.session.removeMarker(marker.id);
+			this.prevErrorMarkers.splice(idx, 1);
+		}
+	}
+
+	removeErrorGutterHighlights() {
+		var redGutter = "redGutter";
+		this.prevSyntaxErrorRanges.forEach((range, i) => {
+			this.editor.session.removeGutterDecoration(range.start.row, redGutter);
+		});
+	}
+
+	removeCommentGutterHighlights() {
+		var commentIndicationStyle = 'greyGutter';
+		this.prevCommentRows.forEach((row, idx) => {
+			this.editor.session.removeGutterDecoration(row, commentIndicationStyle);
+		});
 	}
 
 	addBtnHandlers() {
@@ -1041,6 +1976,29 @@ class Lab {
 		});
 	}
 
+	///////////////////////////////////////////////////////
+	// Initializes the history SVGs and the data structure
+	///////////////////////////////////////////////////////
+	initHistory() {
+		var padding = 20,
+			marginWidth = 100,
+			width = screen.width - 500 - 500 - 2 * padding - marginWidth,
+			height = 50;
+
+		this.checkpoints.forEach((cp, cp_i) => {
+			this.history[cp_i] = [];
+			this.historySVGDivs[cp_i] = [];
+			this.historySVGs[cp_i] = [];
+			cp.testCases.forEach((testcase, tc_i) => {
+				this.history[cp_i][tc_i] = [];
+				this.historySVGDivs[cp_i][tc_i] = $("#history" + cp_i + "-" + tc_i);
+				this.historySVGs[cp_i][tc_i] = d3.select("#history" + cp_i + "-" + tc_i).append("svg")
+													.attr("width", width)
+													.attr("height", height);
+			});
+		});
+	}
+
 	initStatus() {
 		if (USER_NAME) {
 			var URL = LAB_URL + '/' + LAB_ID;
@@ -1057,9 +2015,10 @@ class Lab {
 
 						// Initializing the results array with appropriate dimensions
 						this.initializeResultsArray();
+						this.initHistory();
 
 						this.userData = data.userData;
-						this.editorObj.code = data.userData.code;
+						this.editor.setValue(data.userData.code, -1); // Set value without selecting the entire editor content
 						// TODO: Why creating a new object everytime?
 						//var testParser = new TestParser(this.userData.code);
 						//var parsedObj = testParser.parse();
@@ -1202,6 +2161,124 @@ class Lab {
 		return {checkpoint: ids[0], testcase: ids[1]};
 	}
 
+	highlightSelectedLines(cp_i, tc_i) {
+		var line_idx = [this.editor.selection.getRange().start.row, this.editor.selection.getRange().end.row];
+		var start = line_idx[0];
+		var end = line_idx[1];
+		d3.select("#cross-vis-div" + cp_i + "-" + tc_i).select("svg")
+			.selectAll("circle").classed("hidden", function(d) {
+				return !(start <= (d["@line number"] - 1) && (d["@line number"] - 1) <= end);
+			});
+
+		this.isHighlightStrSelected = (start >= 0 && end >= 0);
+	}
+
+	dehighlightSelectedLines(cp_i, tc_i) {
+		d3.select("#cross-vis-div" + cp_i + "-" + tc_i).select("svg")
+			.selectAll(".hidden").classed("hidden", false);
+		this.isHighlightStrSelected = false;
+	}
+
+	convertToIndexArray(arr) {
+		var start = arr[0];
+		var end = arr[1];
+		var res = [];
+		for (let i = start - 1; ++i <= end;) res.push(i);
+		return res;
+	}
+
+	// Array of indices
+	addMouseupGutterHighlights(indices) {
+		indices.forEach((index, i) => {
+			this.editor.session.addGutterDecoration(index, "orangeGutter");
+		});
+
+		this.isMouseupHighlightedLineIndices = indices;
+		this.isMouseupHighlighted = true;
+	}
+
+	removeMouseupGutterHighlights() {
+		this.isMouseupHighlightedLineIndices.forEach((index, i) => {
+			this.editor.session.removeGutterDecoration(index, "orangeGutter");
+		});
+			
+		this.isMouseupHighlighted = false;
+	}
+
+	addMouseupListener() {
+		// The semantics:
+		//   Only when the mouseup event was followed after a dragging event
+		//   (some text was selected) does the gutter highlight and the viz
+		//   filtering get performed. A mouseup event without dragging (i.e.
+		//   a simple click on the editor) or a mouseup dragging event that 
+		//   selects the same lines of code releases the highlight and the
+		//   filter
+		$("#editor").mouseup((e) => {
+			//console.log(e);
+			e.preventDefault();
+			var cp_i = this.menuClickID.checkpoint;
+			var tc_i = this.menuClickID.testcase;
+
+			var line_idx = [this.editor.selection.getRange().start.row, this.editor.selection.getRange().end.row];
+			var start = line_idx[0];
+			var end = line_idx[1];
+
+			var textSelected = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange()) !== "";
+			var isOneLine = start === end;
+			var clickMadeInPrevRangeNext = this.convertToIndexArray(line_idx).every((v, i) => v === this.isMouseupHighlightedLineIndices[i]);
+
+			var shouldFilter = textSelected && !this.isMouseupHighlighted;
+			// !textSelected && isOneLine will hold in a normal situation with clicking on a line in the editor
+			// this.isMouseupHighlighted && clickMadeInPrevRangeNext is necessary since there's a DOM event
+			// mismatch within the editor it seems. When a mouse click happens in the range of a previously
+			// selected range, it will still return the same range of text as selected, which isn't true.
+			var shouldRelease = (!textSelected && isOneLine) || (this.isMouseupHighlighted && clickMadeInPrevRangeNext);
+
+			if (shouldFilter) {
+				// When there's a selection range and a mouse click happens
+				// within that range, the editor.selection.getRange() method
+				// doesn't correctly return the clicked line index.
+				//   Instead, it keeps thinking that the same range is selected.
+				//   I cannot reproduce the same kind of reaction in other
+				// cases, hence putting in code for this special case
+				// treatment below. (seems to be like an error to
+				// me that the ace editor doesn't respond equally to
+				// regular DOM events)
+				d3.select("#cross-vis-div" + cp_i + "-" + tc_i).select("svg")
+					.selectAll("circle").classed("hidden", function(d) {
+						return !(start <= (d["@line number"] - 1) && (d["@line number"] - 1) <= end);
+					});
+
+				// Highlight the gutter in the editor
+				this.addMouseupGutterHighlights(this.convertToIndexArray(line_idx));
+
+				// Hide all the data points from the history
+				d3.select("#cross-vis-div" + cp_i + "-" + tc_i).select("svg")
+					.selectAll("path").classed("hidden", true);
+			} else if (shouldRelease) {
+				// Dehighlight
+				d3.select("#cross-vis-div" + cp_i + "-" + tc_i).select("svg")
+					.selectAll("circle").classed("hidden", false);
+
+				d3.select("#cross-vis-div" + cp_i + "-" + tc_i).select("svg")
+					.selectAll("path").classed("hidden", false);
+
+				this.removeMouseupGutterHighlights();
+			}
+		});
+
+		$("#diff-code-panel").mouseup((e) => {
+			// The semantics of selection in the diff panel maybe doesn't really make sense
+			e.preventDefault();
+			var code = "";
+			if (window.getSelection) { code = window.getSelection().toString(); }
+			else if (document.selection && document.selection.type !== "Control") {
+				code = document.selection.createRange().text;
+			}
+			// ...
+		});
+	}
+
 	addContextListener() {
 		/* IE >= 9 */
 		document.addEventListener("contextmenu", (e) => {
@@ -1227,7 +2304,7 @@ class Lab {
 				// Show the context menu
 				this.toggleContextMenuWithDebugOn();
 			} else {
-				this.togglecontextMenuWithDebugHighlightOn();
+				//this.togglecontextMenuWithDebugHighlightOn();
 			}
 			this.positionMenu(e);
 		});
@@ -1243,16 +2320,24 @@ class Lab {
 				} else if (e.target.id === this.viewHintMenuID || e.target.id === this.viewHintMenuIDDebug) {
 					// TODO: implement me ...
 				} else if (e.target.id === this.debugMenuID) {
-					this.handleDebugRequest();
+					//this.handleDebugRequest();
 				} else if (e.target.id === this.runTestcaseID) {
 					this.handleRunRequest(RUN_TEST_COMMAND, this.menuClickID.checkpoint, this.menuClickID.testcase);
 				} else if (e.target.id === this.debugHighlightMenuID) {
-					this.populateDebugFuzzySelectionView();				
-					this.highlightDebugString();
+					//this.populateDebugFuzzySelectionView();				
+					//this.highlightDebugString();
 				} else if (e.target.id === this.debugDehighlightMenuID) {
-					this.dehighlightDebugString();
+					//this.dehighlightDebugString();
 				} else if (e.target.id === this.visualDebugMenuID) {
-
+					//this.handleVisualDebugRequest(RUN_TEST_COMMAND, this.menuClickID.checkpoint, this.menuClickID.testcase);
+				} else if (e.target.id === this.saveTestcaseMenuID) {
+					// Save the testcase run result. When this button is clicked, the testcase has already
+					// been run.
+					this.updateHistory(this.menuClickID.checkpoint, this.menuClickID.testcase, this.debugData);
+				} else if (e.target.id === this.highlightOnSelectionMenuID) {
+					//this.highlightSelectedLines(this.menuClickID.checkpoint, this.menuClickID.testcase);
+				} else if (e.target.id === this.dehighlightOnSelectionMenuID) {
+					//this.dehighlightSelectedLines(this.menuClickID.checkpoint, this.menuClickID.testcase);
 				}
 			} else {
 				this.toggleContextOff();
@@ -1288,6 +2373,11 @@ class Lab {
 		}
 	}
 
+	///////////////////////////////////////////////
+	// Name piggy-backing; the context menu
+	// has been changed to support highlighting of
+	// data points rather than debug highlighting
+	///////////////////////////////////////////////
 	togglecontextMenuWithDebugHighlightOn() {
 		if (!this.isContextMenuVisible) {
 			this.isContextMenuVisible = true;
@@ -1304,6 +2394,15 @@ class Lab {
 					this.showDebugHighlightMenu();
 					this.hideDebugDehighlightMenu();
 				}
+			}
+
+			// If the highlight string selected
+			if (this.isHighlightStrSelected) {
+				this.hideHighlightMenu();
+				this.showDehighlightMenu();
+			} else {
+				this.showHighlightMenu();
+				this.hideDehighlightMenu();
 			}
 			this.contextMenuWithDebugHighlight.addClass(this.activeClassName);
 		}
@@ -1463,6 +2562,11 @@ class Lab {
 					d: self.dmp.diff_toDelta(self.dmp.diff_main(self.curText, newText))
 				};
 				self.sendCodeEditSaveRequest(delta);
+
+				// self.menuClickID is set when any testcase link is clicked
+				if (self.menuClickID.checkpoint > -1 && self.menuClickID.testcase > -1) {
+					self.handleRunRequest(RUN_TEST_COMMAND, self.menuClickID.checkpoint, self.menuClickID.testcase);
+				}
 				self.curText = newText;
 		  	}
 		}
@@ -1470,6 +2574,12 @@ class Lab {
 		this.editor.on('change', (e) => {
 			// Remove the syntax error squiggly lines
 			this.removeMarkersInEditorSelection();
+
+			// Remove syntax error gutter highlights
+			this.removeErrorGutterHighlights();
+
+			// Remove comment gutter highlights
+			this.removeCommentGutterHighlights();
 
 			// Debouncing and auto saving
 			if (this.DEBOUNCE_MS > 0) {
@@ -1493,7 +2603,6 @@ class Lab {
 			url: URL,
 			data: JSON.stringify(data),
 			success: (data) => {
-				console.log(data);
 				// Set gutter highlight to indicate syntax error
 				this.highlightSyntaxErrors(data.syntaxErrorRanges);
 

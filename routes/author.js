@@ -83,38 +83,19 @@ module.exports = function(io, db) {
 		if (!testcases) {
 			return;
 		}
-		/*
-		var tableHTML =
-		'<table>' +
-			'<tr>' +
-				'<th>#</th>' +
-				'<th>Testcase</th>' +
-				'<th>Expected</th>' +
-				'<th>Status</th>' +
-			'</tr>';
-		testcases.forEach((ex, idx) => {
-			tableHTML +=
-			'<tr>' +
-				'<td>' + idx + '</td>' +
-				'<td>' + ex.source + '</td>' +
-				'<td>' + ex.want + '</td>' +
-				'<td><img id="case' + ckptNum + idx + '" src="../images/minus.png"/></td>' +
-			'</tr>';
-		});
+		var htmls = [];
 
-		tableHTML +=
-		'</table>'
-		*/
-
-		var html = '';
 		testcases.forEach((c, idx) => {
+			var html = '';
 			html += '<div id="testcase-html-div' + ckptNum + '_' + idx + '">';
 			html +=		'<p><b>Testcase source:</b> ' + c.source + '</p>';
 			html += 	'<p><b>Expected result:</b> ' + c.want + '</p>';
+			html +=		'<p id="testcase-run-result' + ckptNum + '_' + idx + '"><b>Run result:</b></p>';
 			html +=		'<p><B>Status:</b> ' + '<img id="case' + ckptNum + '_' + idx + '" src="../images/minus.png"/>' + '</p>';
 			html += '</div>';
+			htmls.push(html);
 		});
-		return html;
+		return htmls;
 	}
 
 	function parseDocstringHTML(docstrings, docstringHTMLs) {
@@ -144,7 +125,7 @@ module.exports = function(io, db) {
 				}
 
 				var html = md.renderJsonML(HTMLTree);
-				docstringHTMLs.push({name: d.name, descHTML: html, testCaseHTML: createTestcaseHTML(d.examples, idx), testCases: d.examples, questions: []});
+				docstringHTMLs.push({name: d.name, descHTML: html, testCaseHTMLs: createTestcaseHTML(d.examples, idx), testCases: d.examples, questions: []});
 			});
 		}
 	}
@@ -189,7 +170,6 @@ module.exports = function(io, db) {
 				}
 
 				if (docs.length > 0) {
-					console.log('in2');
 					return res.status(200).send({ok: false, reason: "Lab ID already exists"});
 				}
 
@@ -239,11 +219,9 @@ module.exports = function(io, db) {
 			mkdirp(dirPath, (err) => {
 				// Create the lab directory
 				if (err) return console.error(err);
-
 				fs.writeFile(labFilePath, fileContent, (err) => {
 					// Create the lab file
 					if (err) return console.error(err);
-
 					var splitterFilePath = './public/python/PythonTutor/doctest_splitter.py';
 					var readerFilePath = './public/python/PythonTutor/doctest_reader.py';
 					// execute the code
@@ -320,7 +298,6 @@ module.exports = function(io, db) {
 
 			db.find({labID: labID}, (err, docs) => {
 				if (err) {
-					console.log('in1');
 					console.error(err);
 					return res.status(500).render('error',
 						{
@@ -336,7 +313,6 @@ module.exports = function(io, db) {
 							errorMsg: 'System Error: Lab ID not uniquified'
 						});
 				}
-				console.log('userName: ' + body.userName);
 
 				var userIdx = findUser(docs[0].users, body.userName);
 				var codeQueryStr = "users." + userIdx + ".code";

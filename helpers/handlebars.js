@@ -4,6 +4,9 @@ function hbsHelpers(hbs) {
     helpers: {
         reverse: (arr) => {
             arr.reverse();
+        },
+        inc: (val) => {
+        	return parseInt(val) + 1;
         }
     }
   });

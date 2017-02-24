@@ -31,8 +31,16 @@ def factorial(n):
 
     ------
 
-    >>> print [factorial(n) for n in range(6)]
-    [1, 1, 2, 6, 24, 120]
+    >>> print factorial(1)
+    1
+    >>> print factorial(2)
+    2
+    >>> print factorial(3)
+    6
+    >>> print factorial(4)
+    24
+    >>> print factorial(5)
+    120
     >>> print [factorial(long(n)) for n in range(6)]
     [1, 1, 2, 6, 24, 120]
     >>> print factorial(30)

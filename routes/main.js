@@ -188,9 +188,15 @@ module.exports = function(io, db) {
 
 		pyprocess.stdout.on('end', () => {
 			var bufferStr = Buffer.concat(stdoutChunks).toString('utf-8').trim();
-			var jsonObj = JSON.parse(bufferStr);
+			var jsonObj = {};
 
-			// If there was a pars error, perform commenting recursively until
+			try {
+				jsonObj = JSON.parse(bufferStr);
+			} catch(e) {
+				return cb();
+			}
+
+			// If there was a parse error, perform commenting recursively until
 			// the error is gone
 			if (jsonObj.type === 'parse_error') {
 				var start = jsonObj.loc.start;
@@ -246,7 +252,11 @@ module.exports = function(io, db) {
 		db.find({labID: labID}, (err, docs) => {
 			if (err) {
 				console.error(err);
-				return res.sendStatus(500);
+				return res.status(500).render('error',
+				{
+					title: 'Labyrinth - ' + labID,
+					errorMsg: "Something went wrong ... Please check the lab ID and the URL"
+				});
 			} else {
 				if (docs.length !== 1) {
 					docs.forEach((doc, idx) => {
@@ -269,8 +279,8 @@ module.exports = function(io, db) {
 					  			labID: labID,
 					  			language: 'python',
 					  			labDoc: docs[0].labDoc,
-					  			loggedIn: false,
-					  			user: docs[0].users[findUser(docs[0].users, userName)]
+					  			loggedIn: false
+					  			//user: docs[0].users[findUser(docs[0].users, userName)]
 					  		}
 					  	);
 					}
@@ -336,7 +346,14 @@ module.exports = function(io, db) {
 			// TODO: You can maybe compress this for a single testcase run
 			if (!results[cp_idx]) results[cp_idx] = [];
 			if (!results[cp_idx][case_idx]) results[cp_idx][case_idx] = [];
-			var traceObj = JSON.parse(Buffer.concat(resultChunks).toString('utf-8').trim())["opt_trace"];
+			var traceObj = {};
+
+			try {
+				traceObj = JSON.parse(Buffer.concat(resultChunks).toString('utf-8').trim())["opt_trace"];
+			} catch(e) {
+				return cb();
+			}
+
 			if (traceObj.length === 0) {
 				// Function did not exist and nothing was output
 				// <-- this is PythonTutor backend's behavior
@@ -350,7 +367,7 @@ module.exports = function(io, db) {
 				results[cp_idx][case_idx].push(traceObj);
 			}
 
-			cb();
+			 return cb();
 		});
 	}
 
@@ -417,7 +434,6 @@ module.exports = function(io, db) {
 								runTest(lang, execFilePath, pickleFilePath, runningCode, results, cp, cp_idx, testcase, case_idx, () => {
 									count += 1;
 									if (count === numToDo) {
-										console.log(results);
 										return res.status(200).send(
 											{
 												results: results,
@@ -469,7 +485,13 @@ module.exports = function(io, db) {
 
 			pyprocess.stdout.on('end', () => {
 				var bufferStr = Buffer.concat(stdoutChunks).toString('utf-8').trim();
-				var jsonObj = JSON.parse(bufferStr);
+				var jsonObj = {};
+
+				try {
+					jsonObj = JSON.parse(bufferStr);
+				} catch(e) {
+					return res.status(200).send({originalSelectionRange: selectedLoc, extendedSelectionRanges: []});
+				}
 
 				var functionRanges = parser.findFunctionRanges(jsonObj);
 
@@ -483,7 +505,7 @@ module.exports = function(io, db) {
 					}
 				});
 
-				res.status(200).send({originalSelectionRange: selectedLoc, extendedSelectionRanges: extendedSelections});
+				return res.status(200).send({originalSelectionRange: selectedLoc, extendedSelectionRanges: extendedSelections});
 			});
 		} else if (command === "debug") {
 			var code = body.code;
@@ -504,30 +526,25 @@ module.exports = function(io, db) {
 
 			traceProcess.stdout.on('end', () => {
 				// JSON trace is generated
-				res.status(200).send(Buffer.concat(stdoutChunks).toString('utf-8').trim());
+				return res.status(200).send(Buffer.concat(stdoutChunks).toString('utf-8').trim());
 			});
-
-			return;
-
 		} else if (command === "save") {
 			db.find({labID: labID}, (err, docs) => {
 				if (err) {
 					console.log(err);
-					res.status(500).render('error',
+					return res.status(500).render('error',
 					{
 						title: 'Labyrinth - ' + labID,
 						errorMsg: "Something went wrong ... Please check the lab ID and the URL"
 					});
-					return;
 				} else {
 					if (docs.length !== 1) {
 						console.log("Error, lab doc is not uniquified by labID");
-						res.render('error',
+						return res.render('error',
 						{
 							title: 'Labyrinth - ' + labID,
 							errorMsg: "Something went wrong ... Please check the lab ID and the URL"
 						});
-						return;
 					} else {
 						var userName = body.userName;
 						var userIdx = findUser(docs[0].users, userName);
@@ -555,8 +572,7 @@ module.exports = function(io, db) {
 						};
 
 						db.update({labID: labID}, {$set: userStatusObj}, {}, () => {});
-						res.sendStatus(200);
-						return;
+						return res.sendStatus(200);
 					}
 				}
 			});
@@ -603,9 +619,9 @@ module.exports = function(io, db) {
 							};
 							db.update({labID: labID}, {$push: {users: newUser}}, {}, () => {});
 
-							res.status(200).send({ok: true}); // THIS IS WEIRD! IT SENDS A STRING <-- because I set dataType: "text" ... SMH
+							return res.status(200).send({ok: true}); // THIS IS WEIRD! IT SENDS A STRING <-- because I set dataType: "text" ... SMH
 						} else {
-							res.status(200).send({ok: false, reason: "User name already exists"});
+							return res.status(200).send({ok: false, reason: "User name already exists"});
 						}
 					}
 				}
@@ -615,11 +631,11 @@ module.exports = function(io, db) {
 			db.find({ labID: labID }, (err, docs) => {
 				if (err) {
 					console.log(err);
-					res.sendStatus(500);
+					return res.sendStatus(500);
 				} else {
 					if (docs.length !== 1) {
 						console.log("Error, lab doc is not uniquified by labID");
-						res.status(500).render('error',
+						return res.status(500).render('error',
 						{
 							title: 'Labyrinth - ' + labID,
 							errorMsg: "Something went wrong ... Please check the lab ID and the URL"
@@ -628,12 +644,12 @@ module.exports = function(io, db) {
 						var userInDB = docs[0].users[findUser(docs[0].users, userName)];
 						if (userInDB) {
 							if (userInDB.password === body.password) {
-								res.status(200).send({ok: true, userData: userInDB});
+								return res.status(200).send({ok: true, userData: userInDB});
 							} else {
-								res.status(200).send({ok: false, reason: "Password doesn't match"});
+								return res.status(200).send({ok: false, reason: "Password doesn't match"});
 							}
 						} else {
-							res.status(200).send({ok: false, reason: "User name doesn't exist"});
+							return res.status(200).send({ok: false, reason: "User name doesn't exist"});
 						}
 					}
 				}
@@ -660,9 +676,9 @@ module.exports = function(io, db) {
 
 				var userInDB = docs[0].users[findUser(docs[0].users, userName)];
 				if (userInDB) {
-					res.status(200).send({ok: true, userData: userInDB, checkpoints: docs[0].labDoc.checkpoints});
+					return res.status(200).send({ok: true, userData: userInDB, checkpoints: docs[0].labDoc.checkpoints});
 				} else {
-					res.status(200).send({ok: false, reason: "User name doesn't exist"});
+					return res.status(200).send({ok: false, reason: "User name doesn't exist"});
 				}
 			});
 		} else if (command === "codeEditSave") {
@@ -710,7 +726,8 @@ module.exports = function(io, db) {
 				}
 			});
 		} else {
-			return console.log("Unsupported command");
+			console.log("Unsupported comment");
+			return res.status(500).send("Unsupported comment");
 		}
 	});
 
