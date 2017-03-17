@@ -1,0 +1,3 @@
+
+def diffSecondMinMax(nums):
+    pass

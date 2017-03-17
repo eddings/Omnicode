@@ -185,6 +185,7 @@ class AuthorController {
 				skeletonCode: this.getCode(),
 				checkpoints: this.checkpoints,
 			};
+			console.log(lab);
 
 			var request = {
 				labID: LAB_ID,

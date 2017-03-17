@@ -15,15 +15,16 @@ const CODE_EDIT_SAVE_COMMAND	= "codeEditSave";
 const FUZZY_SELECT_COMMAND		= "fuzzySelect";
 const SEARCH_LAB_IDS_COMMAND	= "searchLabIDs";
 const CREATE_LAB_ID_COMMAND		= "newLabID";
+const FILTER_PLOT_COMMAND		= "filterPlot";
 
-//const SERVER_URL 				= "http://localhost:3000";
-const SERVER_URL 				= "https://labyrinth1.herokuapp.com";
+const SERVER_URL 				= "http://localhost:3000";
+//const SERVER_URL 				= "https://labyrinth1.herokuapp.com";
 const LAB_URL 					= SERVER_URL + "/lab";
 const QUESTION_URL 				= SERVER_URL + "/question";
 const AUTHOR_URL				= SERVER_URL + "/author";
 
 var LAB_ID = $('#lab-id-link').text(); // Lab ID
-var LAB_LANG = $('#lab-lang').text(); // Lab programming language
+var LAB_LANG = $('#lab-lang').val(); // Lab programming language
 var USER_NAME = $('#user-name').text(); // Current user name
 var PASSWORD = $('#user-password').val(); // Current user password
 

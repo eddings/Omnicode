@@ -57,7 +57,8 @@ function diffString( o, n ) {
         var pre = "";
 
         for (n = out.n[i].row + 1; n < out.o.length && out.o[n].text == null; n++ ) {
-          pre += '<del>' + escape(out.o[n])/* + oSpace[n] */+ "</del>";
+          //pre += '<del>' + escape(out.o[n])/* + oSpace[n] */+ "</del>";
+          pre += '<del>' + escape(out.o[n]) + oSpace[n] + "</del>";
         }
         str += " " + out.n[i].text + nSpace[i] + pre;
       }

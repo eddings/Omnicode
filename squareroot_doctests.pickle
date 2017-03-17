@@ -13,7 +13,7 @@ S'\n\n# Squareroot of a Number\n\nFind the squareroot of a given number rounded 
 p6
 sS'filename'
 p7
-S'./labs/sqrt\\squareroot.py'
+S'./labs/problems\\squareroot.py'
 p8
 sS'lineno'
 p9

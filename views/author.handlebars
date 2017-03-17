@@ -65,21 +65,43 @@
 // Main navigation section; info div
 //////////////////////////////////////
 -->
-<div id="info" class="info">
-    <p style="display: inline;">
-        <p id="lab-lang" style="display: none;">{{language}}</p>
-        <a id="lab-id-link" href="/lab/{{labID}}?user={{user.userName}}&password={{user.password}}"><img id="lab-icon" src="../images/lab.png"/>{{labID}}</a>
-        {{#if authorLoggedIn}}
-            <p id="user-name"><img id="user-icon" src="../images/user.png"/>{{user.userName}}</p>
-            <input type="hidden" id="user-password" value="{{user.password}}">
-            <a id="sign-out" href="/lab/{{labID}}">Sign out</a>
-        {{/if}}
-        <p><a href="/question/{{labID}}?user={{user.userName}}&password={{user.password}}"><img id="question-icon" src="../images/question.png"/>Question Board</a></p>
-    </p>
+<!-- Main navigation section; info div -->
+<div id="status" class="status">
+    <input type="hidden" id="lab-lang" value="{{language}}">
+    <a id="lab-id-link" href="/lab/{{labID}}?user={{user.userName}}&password={{user.password}}"><img id="lab-icon" src="../images/lab.png"/>{{labID}}</a>
+    {{#if authorLoggedIn}}
+        <p id="user-name"><img id="user-icon" src="../images/user.png"/>{{user.userName}}</p>
+        <input type="hidden" id="user-password" value="{{user.password}}">
+        <a id="sign-out" href="/lab/{{labID}}">Sign out</a>
+    {{/if}}
+</div>
+
+<!-- Testcase List -->
+<div id="author-testcase-list">
+    <div class="testcase-list-content">
+        {{{labDoc.labDescHTML}}}
+        {{#each labDoc.checkpoints}}
+        <div id="checkpoint{{@index}}">
+            {{{descHTML}}}
+            <hr>
+            {{#each testCaseHTMLs}}
+            <div id="testcase-list-item{{@../index}}-{{@index}}">
+                <p class="slim-p">Testcase {{inc @index}} <span id="state{{@../index}}-{{@index}}"></span></p>
+                <p class="slim-p"><i>Input</i> &nbsp; <i><span id="input{{@../index}}-{{@index}}"></span></i></p>
+                <p class="slim-p"><i>Output</i> &nbsp; <i><span id="output{{@../index}}-{{@index}}"></span></i></p>
+                <p class="slim-p"><b>Returned</b> &nbsp; <b><span id="result{{@../index}}-{{@index}}"></span></b></p>
+                <p class="slim-p"><b>Status</b> &nbsp; <img id="status-img{{@../index}}-{{@index}}" src="../images/minus.png"/><span id="status{{@../index}}-{{@index}}"></span></p>
+                <hr>
+            </div>
+            
+            {{/each}}
+        </div>
+        {{/each}}
+    </div>
 </div>
 
 <!-- Tabs for lab description and checkpoints -->
-<div id="tabs">
+<div id="viz">
 </div>
 
 <!--
@@ -95,30 +117,12 @@
 // Code Editor Controls
 //////////////////////////////////////
 -->
-<div id="code-button" class="code-button">
+<div id="code-button" class="author-control">
     <p>Load a lab.py file<input type="file" id="loadFileInput"></p>
     <button id="saveBtn" class="btn btn-primary btn-sm">Save &amp; publish</button>
     <p id="editor-status" style="display: inline-block;"></p>
 </div>
 
-<!--
-//////////////////////////////////////
-// Context Menu
-//////////////////////////////////////
--->
-<nav id="context-menu" class="context-menu">
-    <ul class="context-menu__items">
-        <li class="context-menu__item">
-            <a href="#" id="menu-debug" class="context-menu__link"><i class="fa fa-edit"></i> Debug</a>
-        </li>
-        <li class="context-menu__item">
-            <a href="#" id="menu-view-a-hint" class="context-menu__link"><i class="fa fa-edit"></i> View a hint</a>
-        </li>
-        <li class="context-menu__item">
-            <a href="#" id="menu-ask-a-question" class="context-menu__link"><i class="fa fa-edit"></i> Ask a quetsion</a>
-        </li>
-    </ul>
-</nav>
 
 <script src="../javascripts/jquery-3.1.1.min.js" type="text/javascript" charset="utf-8"></script> <!-- jQuery -->
 <script src="../javascripts/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script> <!-- Ace -->

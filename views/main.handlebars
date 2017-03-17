@@ -7,8 +7,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="shortcut icon" href="">
     <link rel="stylesheet" href='https://fonts.googleapis.com/css?family=Lato:100,200,300,400,500,600,700' type="text/css"> <!-- Lato font -->
+    <script src="../python/PythonTutor/build/pytutor-embed.bundle.js?ea7a33850e" type="text/javascript" charset="utf-8"></script> <!-- For Python Tutor Visualization -->    
     <link rel="stylesheet" href="../stylesheets/css/jquery-ui.min.css" type="text/css"> <!-- jQuery UI -->
-    <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css" type="text/css"> <!-- Bootstrap -->
+    <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css" type="text/css"> <!-- Bootstrap --> 
     <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous"> <!-- Bootstrap for grid scaffolding -->
 	<script src="../javascripts/jquery-3.1.1.min.js" type="text/javascript" charset="utf-8"></script> <!-- jQuery -->
 	<script src="../javascripts/jquery-ui.min.js" type="text/javascript" charset="utf-8"></script> <!-- jQuery UI -->
@@ -78,79 +79,27 @@
 {{/unless}}
 
 <!-- Main navigation section; info div -->
-<div id="info" class="info">
-    <p style="display: inline;">
-        <p id="lab-lang" style="display: none;">{{language}}</p>
-        <a id="lab-id-link" href="/lab/{{labID}}?user={{user.userName}}&password={{user.password}}"><img id="lab-icon" src="../images/lab.png"/>{{labID}}</a>
-        <a href="/question/{{labID}}?user={{user.userName}}&password={{user.password}}"><img id="question-icon" src="../images/question.png"/>Question Board</a>
-        {{#if loggedIn}}
-            <p id="user-name"><img id="user-icon" src="../images/user.png"/>{{user.userName}}</p>
-            <input type="hidden" id="user-password" value="{{user.password}}">
-            <a id="sign-out" href="/lab/{{labID}}">Sign out</a>
-        {{/if}}
-    </p>
+<div id="status" class="status">
+    <input type="hidden" id="lab-lang" value="{{language}}">
+    <a id="lab-id-link" href="/lab/{{labID}}?user={{user.userName}}&password={{user.password}}"><img id="lab-icon" src="../images/lab.png"/>{{labID}}</a>
+    {{#if loggedIn}}
+        <p id="user-name"><img id="user-icon" src="../images/user.png"/>{{user.userName}}</p>
+        <input type="hidden" id="user-password" value="{{user.password}}">
+        <a id="sign-out" href="/lab/{{labID}}">Sign out</a>
+    {{/if}}
 </div>
 
-<div id="lab-doc" class="lab-doc">
-    <!-- Debug Modal -->
-    <div id="debug-modal" class="debug-modal">
-        <div class="debug-modal-content">
-            <span id="debug-modal-close" class="debug-modal-close">&times;</span>
-            <div id="debug-modal-code-div">
-            </div>
-            <p id="debug-modal-status"></p>
-            <button id="debug-modal-ok-btn" class="btn btn-primary btn-sm">Ok</button>
-        </div>
-    </div>
-
-    <!-- Question Modal -->
-    <div id="question-modal" class="question-modal">
-        <div class="question-modal-content">
-            <span id="question-modal-close" class="question-modal-close">&times;</span>
-            <p id="question-modal-checkpoint"></p>
-            <p id="question-modal-testcases"></p>
-            <p><b>Code</b></p>
-            <pre id="question-modal-code"></pre>
-            <p id="question-modal-status"></p>
-            <p>
-                <label for="question-modal-text">Question</label>
-                <textarea id="question-modal-text" class="form-control" rows="5"></textarea>
-            </p>
-            <button id="question-modal-submit-btn" class="btn btn-primary btn-sm">Submit</button>
-        </div>
-    </div>
-
-    <!-- Notification Modal for Quetsions -->
-    <div id="question-notification-modal" class="notification-modal">
-        <div id="question-notification-modal-content" class="notification-modal-content">
-            <span id="question-notification-modal-close" class="notification-modal-close">&times;</span>
-            <div id="question-notification-modal-text">
-            </div>
-            <input type="hidden" id="question-index">
-            <input type="hidden" id="checkpoint-index">
-        </div>
-    </div>
-
-    <!-- Notification Modal for Answers -->
-    <div id="answer-notification-modal" class="notification-modal">
-        <div id="answer-notification-modal-content" class="notification-modal-content">
-            <span id="answer-notification-modal-close" class="notification-modal-close">&times;</span>
-            <div id="answer-notification-modal-text">
-            </div>
-        </div>
-    </div>
-
-    <!-- System Modal -->
-     <div id="warning-notification-modal" class="notification-modal">
-        <div id="warning-notification-modal-content" class="warning-modal-content">
-            <span id="warning-notification-modal-close" class="notification-modal-close">&times;</span>
-            <div id="warning-notification-modal-text">
-            </div>
+<!-- System Modal -->
+ <div id="warning-notification-modal" class="notification-modal">
+    <div id="warning-notification-modal-content" class="warning-modal-content">
+        <span id="warning-notification-modal-close" class="notification-modal-close">&times;</span>
+        <div id="warning-notification-modal-text">
         </div>
     </div>
 </div>
 
 <!-- Tabs for lab description and checkpoints -->
+<!--
 <div id="tabs">
 	<ul>
 		<li><a href="#lab-tab">Lab Description</a></li>
@@ -164,123 +113,129 @@
 	{{#each labDoc.checkpoints}}
 	<div id="checkpoint{{@index}}">
 		{{{descHTML}}}
-		<p>Testcases</p>
+        <hr>
+		<p style="display: inline-block;"><b>Testcases</b></p>
+        <p id="checkpoint-status{{@index}}" style="display: inline-block;"></p>
+        <br/>
 		{{#each testCaseHTMLs}}
-		<a href="#" id="testcase-link{{@../index}}-{{@index}}">Testcase {{inc @index}}<img id="testcase-result{{@../index}}-{{@index}}" src="../images/minus.png"/></a>
+		<a href="#" id="testcase-link{{@../index}}-{{@index}}">Testcase {{inc @index}}:&nbsp;<img id="testcase-result{{@../index}}-{{@index}}" src="../images/minus.png"/></a>&nbsp;&nbsp;
 		{{/each}}
+        <br/>
+        <hr>
 		{{#each testCaseHTMLs}}
 		<div id="testcase-body{{@../index}}-{{@index}}" style="display: none;">
 			{{{this}}}
-            <button id="user-defined-vis-open-btn{{@../index}}-{{@index}}" class="btn btn-primary btn-sm">Show a custom visualization</button>
-            <label for="x-var-input{{@../index}}-{{@index}}">X varaible</label>
-            <input id="x-var-input{{@../index}}-{{@index}}" name="x-var-input{{@../index}}-{{@index}}" type="text">
-            <label for="y-var-input{{@../index}}-{{@index}}">Y varaible</label>
-            <input id="y-var-input{{@../index}}-{{@index}}" name="y-var-input{{@../index}}-{{@index}}" type="text">
-            <p id="input-status{{@../index}}-{{@index}}"></p>
-            <span id="custom-vis-close{{@../index}}-{{@index}}" class="custom-vis-close">&times;</span>
-            <div id="user-defined-vis-div{{@../index}}-{{@index}}"></div>
-			<div id="cross-vis-div{{@../index}}-{{@index}}"></div>
 		</div>
 		{{/each}}
 	</div>
 	{{/each}}
 </div>
+-->
+<div id="viz">
+    {{#each labDoc.checkpoints}}
+    <div id="custom-viz-control-div">
+        <p>
+            Not only all of the local variables and special values (<code>@execution step</code>, <code>@line no.</code>, <code>@return</code>) but derived values (i.e. legal Python expressions on variables such as <code>len(nums)</code>, <code>sum(nums)</code>, etc.) are also available for visualization.
+            <br/>
+        </p>
+        <label for="x-var-input">X varaible</label>
+        <input id="x-var-input" name="x-var-input" type="text">
+        <label for="y-var-input">Y varaible</label>
+        <input id="y-var-input" name="y-var-input" type="text">
+        <button id="user-defined-vis-open-btn{{@index}}" class="btn btn-primary btn-sm">Show a custom visualization</button>&nbsp;
+        <p id="input-status"></p>
+    </div>
+    <a href="#" id="matrix-view-switch">Show me the matrix view</a><a href="#" id="flow-view-switch">Show me the flow view</a>
+    
+    <div id="user-defined-viz-rendered{{@index}}">
+        <span id="custom-vis-close{{@index}}" class="custom-vis-close">&times;</span>
+        <button id="add-user-defined-viz-btn{{@index}}" class="btn btn-default btn-sm" style="display: none;">Add to the collection</button>
+    </div>
+    
+    <div id="viz{{@index}}" class="viz-matrix-div">
+        <hr>
+        <div id="viz-value-exec-step{{@index}}">
+        </div>
+        <div id="viz-derived-value-exec-step{{@index}}"> 
+        </div>
+        <div id="viz-value-value{{@index}}">
+        </div>
+        <div id="viz-custom-value-custom-value{{@index}}">
+        </div>
+    </div>
 
-<!-- Code for Diff -->
-<p id="diff-code-panel-title">Code diff between the current editor content and the selected run</p>
-<div id="diff-code-panel">
+    <div id="matrix-viz{{@index}}">
+        <hr>
+        <div id="matrix-viz-value-value{{@index}}">
+        </div>
+        <div id="matrix-viz-custom-value-custom-value{{@index}}">
+        </div>
+    </div>
+    {{/each}}
 </div>
 
-<!-- History -->
+<!-- Testcase List -->
+<div id="testcase-list">
+    <div class="testcase-list-content">
+        {{{labDoc.labDescHTML}}}
+        {{#each labDoc.checkpoints}}
+        <div id="checkpoint{{@index}}">
+            {{{descHTML}}}
+            <hr>
+            {{#each testCaseHTMLs}}
+            <div id="testcase-list-item{{@../index}}-{{@index}}">
+                <p class="slim-p">Testcase {{inc @index}} <span id="state{{@../index}}-{{@index}}"></span></p>
+                <p class="slim-p"><i>Input</i> &nbsp; <i><span id="input{{@../index}}-{{@index}}"></span></i></p>
+                <p class="slim-p"><i>Output</i> &nbsp; <i><span id="output{{@../index}}-{{@index}}"></span></i></p>
+                <p class="slim-p"><b>Returned</b> &nbsp; <span id="result{{@../index}}-{{@index}}"></span></p>
+                <p class="slim-p"><b>Status</b> &nbsp; <img id="status-img{{@../index}}-{{@index}}" src="../images/minus.png"/><span id="status{{@../index}}-{{@index}}"></span></p>
+                <hr>
+            </div>
+            
+            {{/each}}
+        </div>
+        {{/each}}
+    </div>
+</div>
+
+<!-- Diff Panel -->
+<!--
+<div id="diff-code-panel">
+    <input type="image" src="../images/switch.png" class="right-float-button" name="diff-code-panel-switch" id="diff-code-panel-switch"/>
+    <p id="diff-code-panel-title" class="diff-code-panel-title">Code diff with the current editor content</p>
+    <div id="diff-code-panel-content"></div>
+</div>
+-->
+
+<!-- For PythonTutor visualization -->
+<!--
+<div id="python-tutor-panel">
+    <input type="image" src="../images/switch.png" class="right-float-button" name="python-tutor-viz-panel-switch" id="python-tutor-viz-panel-switch"/>
+    <p class="python-tutor-panel-inner-content">The default view is visualization of the last execution step</p>
+    <div id="PythonTutor-viz-div">
+    </div>
+</div>
+-->
+
+<!-- History 
 {{#each labDoc.checkpoints}}
-	{{#each testCaseHTMLs}}
-		<div id="history{{@../index}}-{{@index}}" class="history">
-			<p>History of testcase runs. Click one to compare with the current result.</p>
-		</div>
-	{{/each}}
+<div id="history-div{{@index}}" class="history">
+	<p>
+        History of testcase runs -- click one to compare with the current result. Current: in&nbsp;<div class="orange-text">orange</div> circle, comparison from the history: in&nbsp;<div class="blue-text">blue</div> diamond
+    </p>
+</div>
 {{/each}}
+-->
 
 <!-- Code Editor -->
-<div id="editor" class="code-editor">
+<div id="editor">
 </div>
-
-<!-- Code Editor Controls -->
-<div id="code-button" class="code-button">
-    <button id="runAllTestsBtn" class="btn btn-primary btn-sm">Run all the tests</button>
-    <!--
-    <button id="debugBtn" class="btn btn-default btn-sm">Debug</button>
-    <button id="saveAndPublishBtn" class="btn btn-primary btn-sm">Save</button>
-    -->
-    <p id="editor-status" style="display: inline-block;"></p>
-</div>
-
-<!-- Console -->
-<div id="console">
-</div>
-<a id="console-clear" href="#">clear</a>
-
-<!-- Debugger Panel -->
-<div id="debugger-view-div"></div>
-<div id="debugger-range-slider"></div>
-<span id="debugger-range-slider-span"></span>
 
 <!-- Context Menus with the Debug Option-->
-<nav id="context-menu-with-debug" class="context-menu">
-    <ul class="context-menu__items">
-        <li class="context-menu__item">
-            <a href="#" id="menu-run" class="context-menu__link"><i class="fa fa-edit"></i> Run this testcase</a>
-        </li>
-        <!--
-        <li class="context-menu__item">
-            <a href="#" id="menu-debug" class="context-menu__link"><i class="fa fa-edit"></i> Debug</a>
-        </li>
-        -->
-        <!--
-        <li class="context-menu__item">
-            <a href="#" id="menu-visual-debug" class="context-menu__link"><i class="fa fa-edit"></i> Visual Debug</a>
-        </li>
-        -->
-        <li class="context-menu__item">
-            <a href="#" id="menu-testcase-save" class="context-menu__link"><i class="fa fa-edit"></i> Save this run</a>
-        <!--
-        <li class="context-menu__item">
-            <a href="#" id="menu-view-a-hint-debug" class="context-menu__link"><i class="fa fa-edit"></i> View a hint</a>
-        </li>
-        <li class="context-menu__item">
-            <a href="#" id="menu-ask-a-question-debug" class="context-menu__link"><i class="fa fa-edit"></i> Ask a quetsion</a>
-        </li>
-        -->
-    </ul>
-</nav>
-
-<!-- Context Menus with Debug Highlight Option-->
-<nav id="context-menu-with-debug-highlight" class="context-menu">
-    <ul class="context-menu__items">
-    <!--
-        <li class="context-menu__item">
-            <a href="#" id="menu-highlight-data" class="context-menu__link"><i class="fa fa-edit"></i> Highlight data on selected lines</a>
-        </li>
-        <li class="context-menu__item">
-            <a href="#" id="menu-dehighlight-data" class="context-menu__link"><i class="fa fa-edit"></i> Dehighlight data on selected lines</a>
-        </li>
-        <li class="context-menu__item">
-            <a href="#" id="menu-debug-highlight" class="context-menu__link"><i class="fa fa-edit"></i> Debug - highlight selected code</a>
-        </li>
-        <li class="context-menu__item">
-            <a href="#" id="menu-debug-dehighlight" class="context-menu__link"><i class="fa fa-edit"></i> Debug - dehighlight selected code</a>
-        </li>
-        <li class="context-menu__item">
-            <a href="#" id="menu-view-a-hint" class="context-menu__link"><i class="fa fa-edit"></i> View a hint</a>
-        </li>
-        <li class="context-menu__item">
-            <a href="#" id="menu-ask-a-question" class="context-menu__link"><i class="fa fa-edit"></i> Ask a quetsion</a>
-        </li>
-    -->
-    </ul>
-</nav>
+<div id="tooltip" class="tooltipClass">
+</div>
 
 <script src="../javascripts/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script> <!-- Ace -->
-<script src="../javascripts/jquery.highlight-5.js" type="text/javascript" charset="utf-8"></script> <!-- Highlight -->
 <script src="../socket.io/socket.io.js" type="text/javascript" charset="utf-8"></script> <!-- Socket.io generated -->
 <script src="../bootstrap/js/bootstrap.min.js" type="text/javascript" charset="utf-8"></script> <!-- Bootstrap -->
 <script src="../javascripts/jquery.ba-dotimeout.min.js" type="text/javascript" charset="utf-8"></script> <!-- jQuery doTimeout -->

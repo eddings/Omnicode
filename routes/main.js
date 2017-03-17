@@ -1,5 +1,61 @@
 'use strict';
 
+// Polyfill
+if (!String.prototype.startsWith) {
+	String.prototype.startsWith = function(searchString, position) {
+    	position = position || 0;
+    	return this.indexOf(searchString, position) === position;
+  	};
+}
+
+if (!Array.prototype.includes) {
+  Object.defineProperty(Array.prototype, 'includes', {
+    value: function(searchElement, fromIndex) {
+
+      // 1. Let O be ? ToObject(this value).
+      if (this == null) {
+        throw new TypeError('"this" is null or not defined');
+      }
+
+      var o = Object(this);
+
+      // 2. Let len be ? ToLength(? Get(O, "length")).
+      var len = o.length >>> 0;
+
+      // 3. If len is 0, return false.
+      if (len === 0) {
+        return false;
+      }
+
+      // 4. Let n be ? ToInteger(fromIndex).
+      //    (If fromIndex is undefined, this step produces the value 0.)
+      var n = fromIndex | 0;
+
+      // 5. If n ≥ 0, then
+      //  a. Let k be n.
+      // 6. Else n < 0,
+      //  a. Let k be len + n.
+      //  b. If k < 0, let k be 0.
+      var k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
+
+      // 7. Repeat, while k < len
+      while (k < len) {
+        // a. Let elementK be the result of ? Get(O, ! ToString(k)).
+        // b. If SameValueZero(searchElement, elementK) is true, return true.
+        // c. Increase k by 1.
+        // NOTE: === provides the correct "SameValueZero" comparison needed here.
+        if (o[k] === searchElement) {
+          return true;
+        }
+        k++;
+      }
+
+      // 8. Return false
+      return false;
+    }
+  });
+}
+
 module.exports = function(io, db) {
 	var express = require('express');
 	var router = express.Router();
@@ -28,7 +84,7 @@ module.exports = function(io, db) {
 		// Construct a pass statement with the corresponding indentation level
 		var passStr = 'pass';
 		for (let i = 0; i < indentLevel; ++i) {
-			passStr = '    ' + passStr;
+			passStr = ' ' + passStr;
 		}
 
 		lines.splice(end, 1, passStr); // Don't append another line in order to 
@@ -43,12 +99,12 @@ module.exports = function(io, db) {
 		return lines.join('\n');
 	}
 
+	////////////////////////////////////////////////////////
+	// Uses heuristics; comment out the error line 
+	// and lower if those lines have the same or higher
+	// level of indentation
+	////////////////////////////////////////////////////////
 	function commentThisLineAndLower(code, errorLineIdx) {
-		////////////////////////////////////////////////////
-		// Uses heuristics; comment out the error line 
-		// and lower if those lines have the same or higher
-		// level of indentation
-		////////////////////////////////////////////////////
 		var lines = code.split('\n');
 		var tabSpliitedLines = [];
 		var lastLineIdx = lines.length - 1;
@@ -56,7 +112,7 @@ module.exports = function(io, db) {
 		lines.forEach((line, idx) => {
 			// Heuristics; the indentation level will hopefully 
 			// be the same
-			tabSpliitedLines[idx] = line.split('    ');
+			tabSpliitedLines[idx] = line.split(' ');
 		});
 
 		var indentLevel = computeIndentLevel(tabSpliitedLines[errorLineIdx]);
@@ -72,11 +128,76 @@ module.exports = function(io, db) {
 			code: commentAndInjectPass(lines, errorLineIdx, down-1, indentLevel),
 			range: {
 				start: {
+					row: errorLineIdx, // the commented out range start
+					column: -1 // Filler value. DO NOT USE THIS
+				},
+				end: {
+					row: down-1, // the commented out range end 
+					column: -1 // Filler value. DO NOT USE THIS
+				}
+			}
+		};
+	}
+
+	function prevNonCommentLineIdx(lines, idx) {
+		for (let i = idx; --i > -1;)
+			if (lines[idx].trim().split("#")[0] !== "") return i;
+	}
+
+	function commentEntireFunction(code, errorLineIdx) {
+		var lines = code.split('\n');
+		var lastLineIdx = lines.length - 1;
+
+		console.log(lines[errorLineIdx]);
+		comment(lines, 0, lastLineIdx);
+		console.log(lines.join('\n'));
+
+		return {
+			code: lines.join('\n'),
+			range: {
+				start: {
 					row: errorLineIdx,
 					column: -1 // Filler value. DO NOT USE THIS
 				},
 				end: {
-					row: down-1,
+					row: lastLineIdx,
+					column: -1 // Filler value. DO NOT USE THIS
+				}
+			}
+		};		
+	}
+
+	//////////////////////////////////////////////////////////
+	// Simply comment this line and all lines below
+	//////////////////////////////////////////////////////////
+	function commentThisLineAndLowerSimple(code, errorLineIdx) {
+		if (errorLineIdx < 0) { return console.log("[commentThisLineAndLowerSimple()] errorLineIdx is invalid"); }
+		var lines = code.split('\n');
+		var lastLineIdx = lines.length - 1;
+
+		var indentLevel = 0,
+			pIndentLevel = 0,
+			cIndentLevel = 0;
+		if (errorLineIdx === 0) {
+			// error in the first line, use 0 as indentLevel
+		} else {
+			pIndentLevel = computeIndentLevel(lines[prevNonCommentLineIdx(lines, errorLineIdx)].split(' '));
+			cIndentLevel = computeIndentLevel(lines[errorLineIdx].split(' '));
+			// in case the previous line was a top-level function definition
+			if (pIndentLevel === 0) indentLevel = cIndentLevel;
+			else if (pIndentLevel < cIndentLevel) indentLevel = pIndentLevel;
+			else indentLevel = cIndentLevel;
+		}
+
+		return {
+			code: commentAndInjectPass(lines, errorLineIdx, lastLineIdx, indentLevel),
+			range: {
+				start: {
+					row: errorLineIdx,
+					column: -1 // Filler value. DO NOT USE THIS
+				},
+				end: {
+					row: lastLineIdx,
 					column: -1 // Filler value. DO NOT USE THIS
 				}
 			}
@@ -98,6 +219,9 @@ module.exports = function(io, db) {
 	// overlap with each other
 	////////////////////////////////////////////////////
 	function overlaps(range1, range2) {
+		if (!range1 || !range2) return false;
+		if (!range1.start || !range2.start) return false;
+		if (!range1.start.row || !range2.start.row) return false;
 		// Checks whether range1 and range2 are well-formed ranges
 		if (range1.start.row > range1.end.row
 			|| range2.start.row > range2.end.row) {
@@ -126,6 +250,30 @@ module.exports = function(io, db) {
 		return false;
 	}
 
+	// Line- and column-wise overlap comparator
+	function overlaps2(range1, range2) {
+		console.log("overlaps2 range1", range1, " range2", range2);
+		if (!range1 || !range2) {
+			return false;
+		}
+		if (range1.start === undefined || range2.start === undefined || range1.end === undefined || range2.end === undefined) {
+			return false;
+		}
+
+		if ((range1.start.row < range2.start.row && range1.end.row < range2.start.row)
+			|| (range1.start.row > range2.end.row && range1.end.row > range2.end.row)) {
+			return false;
+		}
+
+		if (((range1.end.row === range2.start.row)
+			&& (range1.end.col <= range2.start.col))
+			|| ((range1.start.row === range2.end.row)
+			&& (range1.start.col >= range2.end.col))) {
+			return false;	
+		}
+		return true;
+	}
+
 	////////////////////////////////////////////////////
 	// This function comments out only the body of the 
 	// containing function that the given line of code
@@ -142,7 +290,7 @@ module.exports = function(io, db) {
 		var indentLevel = 0;
 
 		lines.forEach((line, idx) => {
-			tabSpliitedLines[idx] = line.split('    '); // TODO: TEST - 4 spaces or \t?
+			tabSpliitedLines[idx] = line.split(' '); // TODO: TEST - 4 spaces or \t?
 		});
 
 		var errorLineIdx = errorLineNo - 1;
@@ -164,14 +312,8 @@ module.exports = function(io, db) {
 		return commentAndInjectPass(lines, up+1, down-1, indentLevel);
 	}
 
-	////////////////////////////////////////////////////
-	// This function comments out the entire function
-	// that the given line of code is included in
-	////////////////////////////////////////////////////
-	function commentContainingFunction(code, errorLineNo) {
-	}
-
 	function commentErrorLines(obj, cb) {
+		//console.log(obj, cb);
 		const pyprocess = cprocess.spawn('python', ['./public/python/parse_python_to_json.py', obj.code]);
 
 		// execute the code
@@ -202,7 +344,9 @@ module.exports = function(io, db) {
 				var start = jsonObj.loc.start;
 				var end = jsonObj.loc.end;
 				var errorLoc = {start:{row:start.line-1,column:start.column},end:{row:end.line-1,column:end.column}};
-				var processedCodeObj = commentThisLineAndLower(obj.code, errorLoc.start.row);
+				//var processedCodeObj = commentThisLineAndLower(obj.code, errorLoc.start.row);
+				//var processedCodeObj = commentThisLineAndLowerSimple(obj.code, errorLoc.start.row);
+				var processedCodeObj = commentEntireFunction(obj.code, errorLoc.start.row);
 				obj.code = processedCodeObj.code;
 				obj.syntaxErrorRanges.push(errorLoc);
 				obj.commentRanges.push(processedCodeObj.range);
@@ -214,7 +358,8 @@ module.exports = function(io, db) {
 			// see if there are any other leftover statements in the containing
 			// function that hasn't been commented out. In this pass, we 
 			// also comment out the function signature line(s) as well as the 
-			// deliberately inserted last pass statement.
+			// deliberately inserted last pass statement. <-- should not comment out the pass line,
+			// in case that's the only statement in the function body
 			var functionRanges = parser.findFunctionRanges(jsonObj);
 			functionRanges.forEach((range, i) => {
 				var j = 0;
@@ -329,8 +474,24 @@ module.exports = function(io, db) {
 		}
 	});
 
-	function runTest(lang, execFilePath, pickleFilePath, code, results, cp, cp_idx, testcase, case_idx, cb) {
-		var execProcess = cprocess.spawn(lang, [execFilePath, pickleFilePath, cp.name, case_idx, code]);
+	function runTest(lang, execFilePath, pickleFilePath, code, results, cp, cp_idx, testcase, case_idx, cb, customVars, derivedExprs) {
+		var resSet = new Set();
+		if (customVars !== undefined) {
+			// Custom var and derived expressions could be the same
+			// Remove any duplicity
+			customVars.forEach((var_, i) => {
+				resSet.add(var_);
+			});
+		} 
+
+		if (derivedExprs !== undefined) {
+			derivedExprs.forEach((expr, i) => {
+				resSet.add(expr);
+			});
+		}
+
+		var customPlusDerivedExprs = Array.from(resSet);
+		var execProcess = cprocess.spawn(lang, [execFilePath, pickleFilePath, cp.name, case_idx, code, JSON.stringify(customPlusDerivedExprs)]);
 		var errChunks = [];
 		var resultChunks = [];
 
@@ -360,7 +521,7 @@ module.exports = function(io, db) {
 				results[cp_idx][case_idx].push([
 					{
 						"event": "exception",
-						"exception_msg": "Function Definition Nonexistent"
+						"exception_msg": "Function definition does not exist"
 					}
 				]);
 			} else {
@@ -369,6 +530,203 @@ module.exports = function(io, db) {
 
 			 return cb();
 		});
+	}
+
+	function convertRange(loc) {
+		// TODO: Confirm the following
+		//       Range2 -- which is the range from the selection in the editor has to be padded in row #'s. 
+		//       Range1 -- the parsed result gives row numbers starting from 1. The editor range starts from 0.
+		//       Confirm that range2 is always the range from the editor selection, though
+		if (loc) {
+			return {
+				start: {
+					row: loc.start.line - 1,
+					col: loc.start.column
+				},
+				end: {
+					row: loc.end.line - 1,
+					col: loc.end.column
+				}
+			};
+		}
+		return null;
+	}
+
+	function containsNotNullElem(node, fields) {
+		console.log("555", node, fields);
+		if (node && fields)
+			for (let i = -1; ++i < fields.length;)
+				if (node[fields[i]] !== null)
+					return true;
+		return false;
+	}
+
+	function collectVariables(jsonObj, range) {
+		// Returns an array of variables in the range
+		// Find all the "Name" types' id of which the loc is included in range
+		let node = jsonObj;
+		node.parent = null;
+		let fields = [],
+			s = new Set();
+		while (node != null) {
+			//console.log("in10 Array.from(s)", Array.from(s));
+			if (overlaps2(convertRange(node.loc), range)) {
+				//console.log("in11 node.type", node.type);
+				if (node.type === "Name" && node.id !== null)
+					s.add(node.id);
+				fields = node["_fields"];
+				console.log("577", "in12 fields containsNotNullElem(node, fields)", fields, containsNotNullElem(node, fields));
+				if (fields && fields.length > 0 && containsNotNullElem(node, fields)) {
+					console.log("578", node);
+					let toDelete = [];
+					fields.forEach((field, i) => { // First path is array flattening
+						if (Array.isArray(node[field])) { // if the element is an array, not an object
+							node[field].forEach((subnode, j) => { // expand it
+								console.log("584 array", field);
+								let newField = field + j;
+								node[newField] = subnode;
+								fields.push(newField);
+							});
+							node[field] = null; // kill the original node element (array)
+							toDelete.push(field);
+						} else if (node[field] !== null && typeof node[field] !== 'object') { // not an object-type (array included) data field 
+							// A little problematic. The first if case and this has overlapping conditions
+							console.log("593 not null, not object type", field);
+							node[field] = null;
+							toDelete.push(field);
+						} else if (node[field] === null) {
+							console.log("597 null", field);
+							toDelete.push(field);
+						} else {
+
+						}
+					});
+					fields = fields.filter(x => toDelete.indexOf(x) === -1); // .includes is not defined
+																			 // and fails silently if used
+					console.log("602", fields);
+					node["_fields"] = fields; // update this change with the original node -- bubble up
+					//console.log("in13 node[\"_fields\"]", node["_fields"] );
+					let funcIdx = [];
+					for (let i = -1; ++i < fields.length;) {
+						// The only distinction necessary is
+						// whether a name is a value or a function type... right? 
+						// Or do we want that all values (including both variables
+						// and function names) to be counted?
+						//   For example, even if the len function was used in the
+						// selected block of code, we don't want to naively say that
+						// because a plot has an y-axis that's using a len function
+						// but on a variable that's not in the block of selection,
+						// that we still include that function... 
+						if (fields[i] !== "func") { // exclude all function names
+							let copy = JSON.parse(JSON.stringify(node)); // deep-copy
+							copy[fields[i]] = null; // kill the branch to this node
+							node = node[fields[i]]; // DFS
+							node.parent = copy;
+							console.log("624", node);
+							break;
+						} else { // if this field is "func", go back to the parent -- do not go in the func node at all?
+							node[fields[i]] = null; // kill the branch to the "func" node
+							funcIdx.push(i);
+						}
+					}
+
+					for (let i = funcIdx.length; --i > -1;) { // funcIdx is always sorted
+						node.parent["_fields"].splice(funcIdx[i], 1); // Remove all the func fields
+					}
+					console.log("635 node", node);
+				} else {
+					console.log("637 node", node);
+					node = node.parent;
+				}
+			} else {
+				console.log("641 node", node);
+				//console.log("in15 no overlap");
+				// Do not overlap; no need to search in the subtree further. Prune
+				// this path immediately.
+				node = node.parent;
+			}
+		}
+		//console.log("573", Array.from(s));
+		return Array.from(s);
+	}
+
+	function transform(plotPairs) {
+		var res = [];
+		for (let i = -1; ++i < plotPairs.length;) {
+			res[i] = [];
+			for (let j = -1; ++j < plotPairs[i].length;) {
+				let x = "",
+					y = "";
+				if (plotPairs[i][j].x !== "@execution step" &&
+					plotPairs[i][j].x !== "@return" &&
+					plotPairs[i][j].x !== "@line no.") {
+					x = plotPairs[i][j].x;
+				}
+
+				if (plotPairs[i][j].y !== "@execution step" &&
+					plotPairs[i][j].y !== "@return" &&
+					plotPairs[i][j].y !== "@line no.") {
+					y = plotPairs[i][j].y;
+				}
+				if (x !== "" && y !== "") {
+					res[i][j] = plotPairs[i][j].x + ";" + plotPairs[i][j].y;
+				} else if (x === "" && y !== "") {
+					res[i][j] = y;
+				} else if (x !== "" && y === "") {
+					res[i][j] = x;
+				} else {
+					res[i][j] = "pass";
+				}
+			}
+		}
+		return res;
+	}
+
+	function parseVariables(plotPairs, pairVars, cb) {
+		// Execute the code. Spawning many processes significantly degrades the performance.
+		// Transform plotPairs into the same-dimensional array of x and y expressions for each plot concatenated with a ";"
+		// Ex. if plotPairs[0][0] has x expression of "@execution step" and y expression of "len(nums)", the result of
+		// this transformation will be res[0][0] := "@execution step;len(nums)"
+		var transformed = transform(plotPairs);
+		console.log("680", transformed);
+		const pyprocess = cprocess.spawn('python', ['./public/python/parse_python_to_json_multiple.py', JSON.stringify(transformed)]),
+			  stdoutChunks = [],
+			  errorChunks = [];
+		pyprocess.stderr.on('data', (chunk) => {
+			errorChunks.push(chunk);
+		});
+		pyprocess.stdout.on('data', function(chunk) {
+			stdoutChunks.push(chunk);
+		});
+		pyprocess.stdout.on('end', () => {
+			var bufferStr = Buffer.concat(stdoutChunks).toString('utf-8').trim();
+			try {
+				var jsonObjs = JSON.parse(bufferStr);
+				for (let i = -1; ++i < plotPairs.length;) {
+					for (let j = -1; ++j < plotPairs[i].length;) {
+						pairVars[i][j] = collectVariables(jsonObjs[i][j], convertRange(jsonObjs[i][j].loc)); // the entire location
+						console.log("696", i, j, pairVars[i][j]);
+					}
+				}
+				return cb();
+			} catch(e) {
+				console.log("700", e);
+				return cb();
+			}
+		});
+	}
+
+	function intersection(a, b) {
+		if (Array.isArray(a) && Array.isArray(b)) {
+			return a.filter(x => b.includes(x));
+		} else {
+			return [];
+		}
+	}
+
+	function addAll(s, a) {
+		if (a)
+			a.forEach((e, i) => { s.add(e); });
 	}
 
 	router.post('/:labID', (req, res, next) => {
@@ -416,6 +774,8 @@ module.exports = function(io, db) {
 
 				var fixObj = {code: body.code, syntaxErrorRanges: [], commentRanges: [], commentedFuncRanges: []};
 				var lang = body.language;
+				var customVars = body.vars;
+				var derivedExprs = body.derivedExprs;
 				var execFilePath = './public/python/PythonTutor/doctest_exec.py';
 				var pickleFilePath = docs[0].pickleFilePath;
 
@@ -442,8 +802,8 @@ module.exports = function(io, db) {
 												commentedFuncRanges: commentedFuncRanges
 											}
 										);
-									}									
-								});
+									}
+								}, customVars, derivedExprs);
 							});
 						});						
 					} else if (command === "runTest") {
@@ -460,9 +820,68 @@ module.exports = function(io, db) {
 									commentedFuncRanges: commentedFuncRanges
 								}
 							);							
-						});
+						}, customVars, derivedExprs);
 					}
 				});
+			});
+		} else if (command === "filterPlot") {
+			var code = body.code,
+				range = body.range,
+			 	onFlowView = body.onFlowView,
+			 	plotPairs = body.plotPairs,
+			 	matrixPlotPairs = body.matrixPlotPairs,
+			 	varNames = body.varNames;
+
+			if (onFlowView && !plotPairs) return res.status(200).send({});
+			if (!onFlowView && !matrixPlotPairs) return res.status(200).send({});
+
+			var pairs = onFlowView ? plotPairs : matrixPlotPairs;
+			// execute the code
+			const pyprocess = cprocess.spawn('python', ['./public/python/parse_python_to_json.py', code]),
+				  stdoutChunks = [],
+				  errorChunks = [];
+			pyprocess.stderr.on('data', (chunk) => {
+				errorChunks.push(chunk);
+			});
+			pyprocess.stdout.on('data', function(chunk) {
+				stdoutChunks.push(chunk);
+			});
+			pyprocess.stdout.on('end', () => {
+				var bufferStr = Buffer.concat(stdoutChunks).toString('utf-8').trim(),
+					jsonObj = {};
+				var ret = [];
+				var pairVars = [];
+
+				for (let i = -1; ++i < pairs.length;) {
+					ret[i] = [];
+					pairVars[i] = [];
+				}
+
+				try {
+					jsonObj = JSON.parse(bufferStr);
+					var selectedVars = collectVariables(jsonObj, range).filter(x => x !== null); // array
+					//console.log("792 Array.from(selectedVars)", Array.from(selectedVars), " varNames", varNames, "pairs", pairs);
+					if (onFlowView) {					
+					} else {
+
+					}
+					parseVariables(pairs, pairVars, () => {
+						for (let i = -1; ++i < pairs.length;) {
+							for (let j = -1; ++j < pairs[i].length;) {
+								//console.log(pairVars, pairVars[i], pairVars[i][j]);
+								//console.log("846 pairVars[i][j].filter(x => x !== null)", pairVars[i][j].filter(x => x !== null));
+								if (intersection(selectedVars, pairVars[i][j].filter(x => x !== null)).length > 0)
+									ret[i][j] = true;
+								else
+									ret[i][j] = false;
+							}
+						}
+						res.status(200).send({filteredPlotPairs: ret});	
+					});
+				} catch(e) {
+					console.log("769", e);
+					return res.status(200).send({});
+				}
 			});
 		} else if (command === "fuzzySelect") {
 			var selectedStr = body.str;

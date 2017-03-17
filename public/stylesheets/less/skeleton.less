@@ -1,6 +1,16 @@
-p, small {
+p, small, a {
+    font-size: 18px;
 	font-family: 'Lato', sans-serif;
 	font-weight: 300;
+}
+
+h1 {
+    font-size: 20px;
+}
+
+.slim-p {
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 ul {
@@ -14,11 +24,14 @@ table, tr, td, th, td {
 	font-weight: 300;
 }
 
+code {
+    font-size: 16px;
+}
+
 pre {
     display: block;
     padding: 0px;
     margin: 0 auto;
-    font-size: 12px;
     line-height: 1.2;
     color: #333;
     word-break: break-all;
@@ -27,321 +40,185 @@ pre {
     word-wrap: break-word;
 }
 
-/* Lab page skeleton */
-/*
-.whole-pane {
+hr {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+.cellDiv {
     position: absolute;
-    left: 5px;
-    right: 5px;
-    width: ~"calc(100vw - 12px)";  
-}
-*/
-.right-pane {
-	position: absolute;
-	left: 50vw;
-    width: 50vw;
-}
-.left-pane {
-	position: absolute;
-    left: 10px;
-    bottom: 10px;
-    width: ~"calc(50vw - 10px)";
 }
 
-/*
-.lab-doc {
-    .left-pane;
-	top: 60px;
-    height: ~"calc(100vh - 70px)";
+.modalBlurredBackgroundDiv {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    z-index: 1001;
+    background: rgba(255,255,255,0.9);
+}
+
+/* Skeleton */
+.left-pane-350 {
+    position: absolute;
+    top: 20px; /* Top status bar */
+    width: 350px;
+    height: ~"calc(100vh - 20px)"; /* Bottom history */
     overflow-y: scroll;
-
 }
 
-.info {
-    .left-pane;
-	font-family: 'Lato', sans-serif;
-	font-weight: 300;
-    top: 8px;
-    display: inline-block;
-}
-
-#user-name {
-    display: inline;
-}
-*/
 .left-pane-400 {
     position: absolute;
-    width: 500px;
-}
-
-.right-pane-400 {
-    position: absolute;
-    left: 500px;
-    width: ~"calc(100vw - 500px - 500px)";
-}
-
-.rightmost-pane {
-    position: absolute;
-    left: ~"calc(100vw - 500px)";
-    width: 500px;
-}
-
-#tabs {
-    .right-pane-400;
-    top: 0;
-    height: ~"calc(100vh - 90px)";
-    overflow-y: scroll;    
-}
-
-/* Diff Code Panel */
-#diff-code-panel-title {
-    display: none;
-    .rightmost-pane;
-}
-
-#diff-code-panel {
-    display: none;
-    .rightmost-pane;
-    top: 30px;
-    height: ~"calc(100vh - 120px)";
+    top: 20px; /* Top status bar */
+    width: 400px;
+    /* width: 300px; */
+    height: ~"calc(100vh - 20px)"; /* Bottom history */
     overflow-y: scroll;
 }
 
-.lab-doc {
-    .right-pane-400;
-    top: 60px;
-    height: ~"calc(100vh - 70px)";
+.middle-pane-left-350 {
+    position: absolute;
+    top: 20px; /* Top status bar */
+    left: 350px;
+    width: 350px;
+    height: ~"calc(100vh - 20px)"; /* Bottom history */
     overflow-y: scroll;
 }
 
-.history {
-    display: none;
-    .right-pane-400;
-    top: ~"calc(100vh - 90px)";
+.middle-pane-left-400 {
+    position: absolute;
+    top: 20px; /* Top status bar */
+    left: 400px;
+    /* left: 300px; */
+    width: 700px;
+    /* width: 400px; */
+    height: ~"calc(100vh - 20px)"; /* Bottom history */
+    overflow-y: scroll;
 }
 
-.info {
-    .left-pane-400;
+.right-pane-middle-350 {
+    position: absolute;
+    top: 20px; /* Top status bar */
+    left: ~"calc(350px + 350px)";
+    width: ~"calc(100vw - 350px - 350px)";
+    height: ~"calc(100vh - 20px)"; /* Bottom history */
+    overflow-y: scroll;
+}
+
+.right-pane-middle-400 {
+    position: absolute;
+    top: 20px; /* Top status bar */
+    left: ~"calc(400px + 700px)"; /* Adjustment for paddings ACE editor */
+    /* left: ~"calc(300px + 400px)"; */
+    width: ~"calc(100vw - 400px - 700px)";
+    /* width: ~"calc(100vw - 300px - 400px)"; */
+    height: ~"calc(100vh - 20px)"; /* Bottom history */
+    overflow-y: scroll;
+}
+
+/* Status Pane -- top */
+.status {
+    position: absolute;
+    height: 10px;
+    left: 5px;
     font-family: 'Lato', sans-serif;
     font-weight: 300;
-    top: 8px;
     display: inline-block;
 }
 
-#user-name {
-    display: inline;
+.status p {
+    display: inline-block;
 }
 
-/* Console */
-/* Uses a pre element to create a console. When used with Bootstrap, their different styling conflicts */
-/* The inner console element. */
-.jqconsole {
-    padding: 10px;
-}
-/* The cursor. */
-.jqconsole-cursor {
-    background-color: gray;
-}
-/* The cursor color when the console looses focus. */
-.jqconsole-blurred .jqconsole-cursor {
-    background-color: #666;
-}
-/* The current prompt text color */
-.jqconsole-prompt {
-    color: #000;
-}
-/* The command history */
-.jqconsole-old-prompt {
-    color: #808080;
-    font-weight: normal;
-}
-/* The text color when in input mode. */
-.jqconsole-input {
-    color: #000;
-}
-/* Previously entered input. */
-.jqconsole-old-input {
-    color: #808080;
-    font-weight: normal;
-}
-/* The text color of the output. */
-.jqconsole-output {
-    color: #808080;
-}
-
-/* Small height screens
-@media screen and (min-height: 200px), screen and (max-height: 550px) {
-    .code-editor {
-        .right-pane;
-        top: 0;
-        bottom: 175px;
-        height: ~"calc(100vh - 205px)";
-    }
-    .code-button {
-        .right-pane;
-        top: ~"calc(100vh - 185px - 10px)";
-        height: 20px;
-        left: ~"calc(50vw + 5px)";
-        right: 5px;
-        width: ~"calc(50vw - 10px)";
-    }
-    #console {
-        .right-pane;
-        top: ~"calc(100vh - 155px)";
-        left: ~"calc(50vw + 5px)";
-        right: 5px;
-        width: ~"calc(50vw - 10px)";
-        height: 145px;
-    }
-    #console-clear {
-        .right-pane;
-        top: ~"calc(100vh - 20px)";
-        height: 10px;
-        left: ~"calc(50vw + 5px)";
-        right: 5px;
-        width: ~"calc(50vw - 10px)";
-    }
-    #debuggerViewDiv {
-        display: none;
-        .right-pane;
-        top: ~"calc(100vh - 165px)";
-        left: ~"calc(50vw + 5px)";
-        width: ~"calc(50vw - 5px)";
-        height: 110px;
-        overflow-y: scroll;
-    }
-    #debuggerRangeSlider {
-        display: none;
-        .right-pane;
-        top: ~"calc(100vh - 35px)";
-        left: ~"calc(50vw + 5px)";
-        width: ~"calc(50vw - 20px)";
-        height: 10px;
-    }
-    #debuggerRangeSliderSpan {
-        display: none;
-        .right-pane;
-        top: ~"calc(100vh - 25px)";
-        left: ~"calc(50vw + 5px)";
-        width: ~"calc(50vw - 20px)";
-        height: 10px;
-    }
-}
-*/
-/* Large height screens 
-@media screen and (min-height: 550px) {
-    .code-editor {
-        .right-pane;
-        top: 0;
-        bottom: 220px;
-        height: ~"calc(100vh - 250px)";
-    }
-    .code-button {
-        .right-pane;
-        top: ~"calc(100vh - 230px - 10px)";
-        height: 20px;
-        left: ~"calc(50vw + 5px)";
-        right: 5px;
-        width: ~"calc(50vw - 10px)";
-    }
-    #console {
-        .right-pane;
-        top: ~"calc(100vh - 200px)";
-        height: 180px;
-        left: ~"calc(50vw + 5px)";
-        right: 5px;
-        width: ~"calc(50vw - 10px)";
-    }
-    #console-clear {
-        .right-pane;
-        top: ~"calc(100vh - 20px)";
-        left: ~"calc(50vw + 5px)";
-        right: 5px;
-        width: ~"calc(50vw - 10px)";
-        height: 10px;
-    }
-    #debugger-view-div {
-        display: none;
-        .right-pane;
-        top: ~"calc(100vh - 200px)";
-        left: ~"calc(50vw + 5px)";
-        width: ~"calc(50vw - 5px)";
-        height: 145px;
-        overflow-y: scroll;
-    }
-    #debugger-range-slider {
-        display: none;
-        .right-pane;
-        top: ~"calc(100vh - 35px)";
-        left: ~"calc(50vw + 10px)";
-        width: ~"calc(50vw - 20px)";
-        height: 10px;
-    }
-    #debugger-range-slider-span {
-        display: none;
-        .right-pane;
-        top: ~"calc(100vh - 25px)";
-        left: ~"calc(50vw + 10px)";
-        width: ~"calc(50vw - 20px)";
-        height: 10px;
-    }
-    #visual-debugger-view-div {
-        height: 420px;
-    }
-}
-*/
-
-.code-editor {
-    .left-pane-400;
-    top: 30px;
-    bottom: 220px;
-    height: ~"calc(100vh - 250px)";
-}
-.code-button {
+/* History Pane -- bottom */
+.history {
     position: absolute;
-    width: 480px;
-    left: 10px;
-    top: ~"calc(100vh - 230px - 10px + 25px)";
-    height: 20px;
-}
-#console {
-    .left-pane-400;
     left: 10px;
     right: 10px;
-    width: 380px;
-    top: ~"calc(100vh - 220px + 40px)";
-    height: 160px;
+    top: ~"calc(100vh - 130px)";
+    height: 130px;
 }
-#console-clear {
+
+.history p {
+    display: inline-block;
+}
+
+#testcase-list {
     .left-pane-400;
-    left: 10px;
-    top: ~"calc(100vh - 40px + 15px)";
-    height: 10px;
 }
-#debugger-view-div {
-    display: none;
-    position: absolute;
-    width: 480px;
-    left: 10px;
-    top: ~"calc(100vh - 200px)";
-    height: 145px;
-    overflow-y: scroll;
+
+#author-testcase-list {
+    .left-pane-400;
+    top: 100px;
 }
-#debugger-range-slider {
+
+#matrix-view-switch {
     display: none;
-    position: absolute;
-    width: 480px;
-    left: 10px;
-    top: ~"calc(100vh - 35px)";
-    height: 10px;
 }
-#debugger-range-slider-span {
+
+.testcase-list-content {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+/* Visualization Pane -- rightmost */
+#viz {
+    .right-pane-middle-400;
+}
+
+.viz-matrix-div {
     display: none;
+}
+
+.viz-title-p {
     position: absolute;
-    width: 480px;
-    left: 10px;
-    top: ~"calc(100vh - 25px)";
-    height: 10px;
+}
+
+/* Author control */
+.author-control {
+    position: absolute;
+    top: 20px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+/* PythonTutor Visualization Pane -- leftmost */
+#python-tutor-panel {
+    .left-pane-400;
+}
+
+.python-tutor-panel-inner-content {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+/* Diff Code Panel -- leftmost */
+#diff-code-panel {
+    .left-pane-400;
+    display: none;
+}
+
+.diff-code-panel-title {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.right-float-button {
+    float: right;
+}
+
+/* Editor */
+#editor {
+    .middle-pane-left-400;
+}
+
+.orange-text {
+    display: inline-block;
+    color: rgb(255,127,80);
+}
+
+.blue-text {
+    display: inline-block;
+    color: rgb(82,209,2552);
 }
 
 .custom-vis-close {
@@ -356,29 +233,6 @@ pre {
 	float: left;
 	vertical-align: middle;
 	padding-right: 5px;
-}
-
-/* Question Modal */
-.question-modal {
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 100; /* Sit on top */
-    padding-top: 100px; /* Location of the box */
-    left: 0;
-    top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgb(0,0,0); /* Fallback color */
-    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-}
-
-.question-modal-content {
-    background-color: #fefefe;
-    margin: auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
 }
 
 /* The Close Button */
@@ -396,54 +250,12 @@ pre {
     cursor: pointer;
 }
 
-/* Debug Modal */
-.debug-modal {
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 100; /* Sit on top */
-    padding-top: 100px; /* Location of the box */
-    left: 0;
-    top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
-    background-color: rgb(0,0,0); /* Fallback color */
-    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-}
-
-.debug-modal-content {
-    background-color: #fefefe;
-    margin: auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-}
-
-/* The Close Button */
-.debug-modal-close {
-    color: #aaaaaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-}
-
-.debug-modal-close:hover,
-.debug-modal-close:focus {
-    color: #000;
-    text-decoration: none;
-    cursor: pointer;
-}
-
 /* Modal for notifications */
 /* Background */
 .notification-modal {
     display: none; /* Hidden by default */
     position: fixed; /* Stay in place */
     z-index: 100; /* Sit on top */
-    /*
-    left: 0;
-    top: 0;
-    */
     margin-left: 70vw;
     margin-top: 60vh;
     width: 25vw;
@@ -456,13 +268,6 @@ pre {
     background-color: rgba(255,192,45,0.7); /* Yellow w/ opacity */
     padding-left: 10px;
     padding-right: 10px;
-    /*
-    margin-left: 70vw;
-    margin-top: 60vh;
-    border: none;
-    width: 25vw;
-    height: 30vh;
-	*/
 }
 .warning-modal-content {
     background-color: rgba(255,187,187,0.7); /* Red w/ opacity */
@@ -522,18 +327,20 @@ pre {
 }
 
 /* Context menu */
-.context-menu {
+.tooltipClass {
     display: none;
     position: absolute;
     z-index: 10;
-    padding: 0 0;
-    width: 240px;
+    /* padding: 0 0; */
+    width: 500px;
     background-color: #fff;
     border: solid 1px #dfdfdf;
     box-shadow: 1px 1px 2px #cfcfcf;
+    overflow-x: scroll;
+    overflow-y: scroll;
 }
 
-.context-menu--active {
+.tooltip--active {
     display: block;
 }
 
@@ -563,37 +370,6 @@ pre {
     color: #fff;
     background-color: #0066aa;
     text-decoration: none; /* Not sure why I have to add this again? */
-}
-
-/* Question board */
-.question-board {
-    padding-top: 60px;
-}
-
-.question-invisible {
-    display: none;
-}
-
-.question-visible {
-    display: block;
-    margin: 0 auto;
-}
-
-.div-question-detail {
-    display: none;
-}
-
-.answer-visible {
-    margin-left: 50px;
-}
-
-.answer-invisible {
-    margin-left: 50px;
-    display: none;
-}
-
-.testCase-div {
-    display: none;
 }
 
 /* Entry page */
@@ -731,4 +507,16 @@ pre .line-number span {
 pre .cl {
   display:block;
   clear:both;
+}
+
+/* History Viz */
+
+.x.axis line {
+  shape-rendering: auto;
+}
+
+.line {
+  fill: none;
+  stroke: #000;
+  stroke-width: 1.5px;
 }
