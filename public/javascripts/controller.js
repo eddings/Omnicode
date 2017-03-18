@@ -202,7 +202,7 @@ class Lab {
 		this.matrixPlotPairs = [];
 		// The # of visualizations for each checkpoint
 		this.checkpointVizNumber = [];
-		this.checkpointMatrixVizNumber = [];
+		this.checkpointScatterplotMatrixVizNumber = [];
 
 		// Code line highlights for point selection in the vis
 		this.prevHighlightedCodeLines = [];
@@ -268,7 +268,6 @@ class Lab {
 				this.plotPairs[cp_i][3].push({x: xVarName, y: yVarName});
 				// Update the checkpoint viz number
 				++this.checkpointVizNumber[cp_i];
-				++this.checkpointMatrixVizNumber[cp_i];
 
 				if (this.onFlowView) {
 					this.addToCorrectGridPosition(cp_i, this.plotPairs[cp_i][3].length - 1); // Flow view, index is length - 1
@@ -299,15 +298,14 @@ class Lab {
 			pOffsetLeft = pDiv.offsetLeft;
 		let numTitles = 0,
 			titleHeight = 20;
-		$("p[id^='matrix-viz-p-']").each((i, _) => { ++numTitles; });
+		$("p[id^='matrix-viz-p-']").each((_) => { ++numTitles; });
 
-		let idStr = "matrix-viz" + cp_i + "-" + this.checkpointMatrixVizNumber[cp_i];
+		let idStr = "matrix-viz" + cp_i + "-custom-" + i;
 		if (document.getElementById(idStr) === null) {
 			let c = dEl.cloneNode(false);
 			let adRows = isNaN(this.matrixPlotPairs[cp_i][0][0].length) ? 0 : this.matrixPlotPairs[cp_i][0][0].length; // The plot hasn't been added 
 			adRows += Math.floor(i / cols);
 			let top = pOffsetTop + adRows * (height + 2 * padding) + numTitles * titleHeight;
-			console.log(adRows);
 
 			// If this is the first custom plot added, add the title for the section
 			let title = "Custom variable - custom variable plot(s)";
@@ -328,7 +326,7 @@ class Lab {
 		}
 
 		let svg = $("#user-defined-viz-rendered" + cp_i + "-svg").detach();
-		svg.attr("id", "matrix-viz" + cp_i + "-" + i + "-svg");
+		svg.attr("id", "matrix-viz" + cp_i + "-custom-" + i + "-svg");
 		$("#" + idStr).append(svg).hide().fadeIn(1000);		
 	}
 
@@ -900,7 +898,6 @@ class Lab {
 	createDebugVizData(trace) {
 		var dataArray = [];
 		var localVarNames = new Set();
-		console.log(trace);
 		trace.forEach((t, i) => {
 			var orderedGlobals = t['ordered_globals'];
 			if (!orderedGlobals) {
@@ -1096,7 +1093,7 @@ class Lab {
 					// X-axis label
 					d3.select(this)
 						.append("text")
-						.attr("transform", "translate(" + (width - 50) / 2 + "," + (height + padding + 5) + ")")
+						.attr("transform", "translate(" + (width / 2 - 50) + "," + (height + padding + 5) + ")")
 						.attr("font-size", "18px")
 						.text(d);
 				});
@@ -1202,7 +1199,7 @@ class Lab {
 	}
 
 	vizIndexToPlotPairMatrix(cp_i, i) {
-		if (i < 0 || i >= this.checkpointMatrixVizNumber[cp_i]) { return {x: undefined, y: undefined}; }
+		if (i < 0 || i >= this.checkpointScatterplotMatrixVizNumber[cp_i] + this.plotPairs[cp_i][3].length) { return {x: undefined, y: undefined}; }
 		let base = 0;
 		let scatterPlotMatrixW = this.matrixPlotPairs[cp_i][0].length;
 		for (let j = -1; ++j < scatterPlotMatrixW;) {
@@ -1230,7 +1227,7 @@ class Lab {
 		// Initialize plot-rendering related data structures
 		this.prepareVizPairArray();
 		this.checkpointVizNumber[cp_i] = 0;
-		this.checkpointMatrixVizNumber[cp_i] = 0;
+		this.checkpointScatterplotMatrixVizNumber[cp_i] = 0;
 	}
 
 	// Only after this.plotPairs[cp_i] has been initialized,
@@ -1260,7 +1257,7 @@ class Lab {
 			this.matrixPlotPairs[cp_i][1][i] = {x: customs[i].x, y: customs[i].y};
 		}
 
-		this.checkpointMatrixVizNumber[cp_i] = len * (len + 1) / 2 + customs.length;
+		this.checkpointScatterplotMatrixVizNumber[cp_i] = len * (len + 1) / 2;
 	}
 
 	// Sets the this.checkpointVizNumber[cp_i] and this.plotPairs[cp_i]
@@ -1307,7 +1304,7 @@ class Lab {
 		dEl.style.height = height + "px";
 
 		// Remove divs
-		$("div[id^='matrix-viz" + cp_i + "-']").each((i, el) => { console.log($(el).attr("id")); $(el).remove(); });
+		$("div[id^='matrix-viz" + cp_i + "-']").each((_, el) => { $(el).remove(); });
 
 		let pDiv = document.getElementById("matrix-viz" + cp_i),
 			pOffsetTop = pDiv.offsetTop,
@@ -1345,13 +1342,12 @@ class Lab {
 		}
 
 		for (let i = -1; ++i < scatterPlotMatrixW;) {
-			base = i > 0 ? base + this.matrixPlotPairs[cp_i][0][i].length : 0;	
+			base = i > 0 ? (base + scatterPlotMatrixW) : 0;	
 			for (let j = -1; ++j < scatterPlotMatrixW;) {
 				let idStr = "matrix-viz" + cp_i + "-" + (base + j);
 				if (document.getElementById(idStr) === null) {
 					let c = dEl.cloneNode(false);
 					c.style.top = (pOffsetTop + titleNum * titleHeight + i * (height + 2 * padding)) + "px";
-					console.log(pOffsetLeft, j * (width + 2 * padding));
 					c.style.left = (pOffsetLeft + j * (width + 2 * padding)) + "px";
 					c.id = idStr;
 					$("#matrix-viz-value-value" + cp_i).append(c);
@@ -1372,9 +1368,8 @@ class Lab {
 		}
 
 		pOffsetTop = lastTop + scatterPlotMatrixW * (height + 2 * padding) + titleNum * titleHeight;
-		base = scatterPlotMatrixW * (scatterPlotMatrixW + 1) / 2;
 		for (let i = -1; ++i < customVizLen;) {
-			let idStr = "matrix-viz" + cp_i + "-" + (base + i);
+			let idStr = "matrix-viz" + cp_i + "-custom-" + i;
 			if (document.getElementById(idStr) === null) {
 				let c = dEl.cloneNode(false);
 				c.style.top = (pOffsetTop + Math.floor(i / cols) * (height + 2 * padding)) + "px";
@@ -1467,6 +1462,22 @@ class Lab {
 
 		this.prevRowNum = rowNum;
 		*/
+	}
+
+	// Return the correct div index for left-aligned triangular matrix
+	// The term pad appears b/c it's almost like padding the right of
+	// each row to adjust for row-switches
+	vizMatrixPad(cp_i, i) {
+		let w = this.matrixPlotPairs[cp_i][0].length;
+		let sum = w;
+		for (let ii = w; --ii > 0;) {
+			if (sum <= i && i < sum + ii) {
+				return i + (w - ii ) * w - sum;
+			} else {
+				sum += ii;
+			}
+		}
+		return i;
 	}
 
 	//////////////////////////////////////
@@ -1582,12 +1593,14 @@ class Lab {
 				    		this.dehighlightPrevCodeLinesInDiffView();
 				    	}
 				    });
-
-		let len = this.onFlowView ? this.checkpointVizNumber[cp_i] : this.checkpointMatrixVizNumber[cp_i];
+		let scatterPlotMatrixVizLen = this.checkpointScatterplotMatrixVizNumber[cp_i];
+		let customVizLen = this.plotPairs[cp_i][3].length;
+		let len = this.onFlowView ? this.checkpointVizNumber[cp_i] : scatterPlotMatrixVizLen + customVizLen;
 		for (let i = -1; ++i < len;) {
 			var xVar = "";
 			var yVar = "";
 			var select = null;
+			let paddedI = -1;
 			if (this.onFlowView) {
 				xVar = this.vizIndexToPlotPair(cp_i, i).x;
 				yVar = this.vizIndexToPlotPair(cp_i, i).y;
@@ -1595,11 +1608,17 @@ class Lab {
 				d3.select("#viz" + cp_i + "-" + i + "-svg").remove(); // Remove the old SVG
 				select = d3.select("#viz" + cp_i + "-" + i);
 			} else {
-				xVar = this.vizIndexToPlotPairMatrix(cp_i, i).x;
+				xVar = this.vizIndexToPlotPairMatrix(cp_i, i).x; // vizIndexToPlotPairMatrix() function works with any i
 				yVar = this.vizIndexToPlotPairMatrix(cp_i, i).y;
 
-				d3.select("#matrix-viz" + cp_i + "-" + i + "-svg").remove(); // Remove the old SVG
-				select = d3.select("#matrix-viz" + cp_i + "-" + i)
+				if (i < scatterPlotMatrixVizLen) {
+					paddedI = this.vizMatrixPad(cp_i, i);
+					d3.select("#matrix-viz" + cp_i + "-" + paddedI + "-svg").remove(); // Remove the old SVG, if there was one
+					select = d3.select("#matrix-viz" + cp_i + "-" + paddedI);
+				} else {
+					d3.select("#matrix-viz" + cp_i + "-custom-" + (i - scatterPlotMatrixVizLen) + "-svg").remove();
+					select = d3.select("#matrix-viz" + cp_i + "-custom-" + (i - scatterPlotMatrixVizLen));
+				}
 			}
 
 			// Create the new SVG
@@ -1608,7 +1627,12 @@ class Lab {
 					    	if (this.onFlowView) {
 					    		return "viz" + cp_i + "-" + i + "-svg";
 					    	} else {
-					    		return "matrix-viz" + cp_i + "-" + i + "-svg";
+								if (i < scatterPlotMatrixVizLen) {
+									return "matrix-viz" + cp_i + "-" + paddedI + "-svg";
+								} else {
+									return "matrix-viz" + cp_i + "-custom-" + (i - scatterPlotMatrixVizLen) + "-svg";
+								}
+					    		
 					    	}
 					    })
 						.attr("width", width + 2 * padding)
@@ -1626,7 +1650,7 @@ class Lab {
 					// X-axis label
 					d3.select(this)
 						.append("text")
-						.attr("transform", "translate(" + (width - 50) / 2 + "," + (height + padding + 5) + ")")
+						.attr("transform", "translate(" + (width / 2 - 50) + "," + (height + padding + 5) + ")")
 						.attr("font-size", "18px")
 						.text(d);
 				});
@@ -1691,7 +1715,16 @@ class Lab {
 		  			return tooltip.style("visibility", "hidden");
 		  		});
 
-			var svgContainer = this.onFlowView? d3.select("#viz" + cp_i + "-" + i) : d3.select("#matrix-viz" + cp_i + "-" + i);
+			var svgContainer = null;
+			if (this.onFlowView) {
+				svgContainer = d3.select("#viz" + cp_i + "-" + i);
+			} else {
+				if (i < scatterPlotMatrixVizLen) {
+					svgContainer = d3.select("#matrix-viz" + cp_i + "-" + i);
+				} else {
+					svgContainer = d3.select("#matrix-viz" + cp_i + "-custom-" + (i - scatterPlotMatrixVizLen));
+				}
+			}
 			var tooltip = svgContainer.append("div")
 									  .style("position", "absolute")
 									  .style("z-index", "1001")
@@ -2044,12 +2077,19 @@ class Lab {
 									if (heapData && Array.isArray(heapData)) {
 										let type = heapData[0];
 										let numeric = false;
-										if (heapData[1] && Array.isArray(heapData[1])) {
-											// dict
-											numeric = heapData.slice(1).map(x => typeof x[1] === "number").reduce((pre, cur) => pre && cur);
-										} else {
-											// tuple, list, set
-											numeric = heapData.slice(1).map(x => typeof x === "number").reduce((pre,  cur) => pre && cur);
+										if (heapData.length > 1) {
+											// Non-empty list, tuple, set, dict
+											if (heapData[1] && Array.isArray(heapData[1])) {
+												if (heapData[1].length === 2 && heapData[1][0] === "REF") {
+													// Multi-dimensional list
+												} else {
+													// dict
+													numeric = heapData.slice(1).map(x => typeof x[1] === "number").reduce((pre, cur) => pre && cur);
+												}
+											} else {
+												// tuple, list, set
+												numeric = heapData.slice(1).map(x => typeof x === "number").reduce((pre,  cur) => pre && cur);
+											}	
 										}
 										heapVarsObj[varName] = {type: type, numeric: numeric};
 										varNameSet.add(varName); // Any heap variable name's added to the set
@@ -2099,7 +2139,6 @@ class Lab {
 			}
 		});
 
-		console.log(Array.from(varNameSet));
 		this.varNames = Array.from(varNameSet);
 		return plotPairs;
 	}
@@ -2110,6 +2149,7 @@ class Lab {
 			data: JSON.stringify(dataObj),
 			success: (data) => {
 				var json = JSON.parse(data);
+				console.log(json);
 				this.derivedExprPairs = this.deriveExprs(cp_i, tc_i, json);
 				dataObj.derivedExprs = this.derivedExprPairs.map((e) => e.y);
 				$.post({
@@ -2522,7 +2562,7 @@ class Lab {
 	initVizNumbers() {
 		this.checkpoints.forEach((cp, cp_i) => {
 			this.checkpointVizNumber[cp_i] = 0;
-			this.checkpointMatrixVizNumber[cp_i] = 0;
+			this.checkpointScatterplotMatrixVizNumber[cp_i] = 0;
 		});
 	}
 
@@ -2781,30 +2821,43 @@ class Lab {
 	}
 
 	showPlots(plotPairs) {
+		let mainPlotPairs = plotPairs.slice(0, plotPairs.length - 1);
 		let cp_i = this.menuClickID.checkpoint;
 		let cnt = 0;
-		for (let i = -1; ++i < plotPairs.length;) {
-			for (let j = -1; ++j < plotPairs[i].length;) {
+		for (let i = -1; ++i < mainPlotPairs.length;) {
+			for (let j = -1; ++j < mainPlotPairs[i].length;) {
 				if (plotPairs[i][j]) {
 					if (this.onFlowView) {
 						$("#viz" + cp_i + "-" + cnt).show();
 					} else {
-						$("#matrix-viz" + cp_i + "-" + cnt).show();
+						$("#matrix-viz" + cp_i + "-" + this.vizMatrixPad(cp_i, cnt)).show();
 					}
 				}
 				++cnt;
 			}
+		}
+
+		let customPlotPairs = plotPairs.slice(plotPairs.length - 1)[0];
+		for (let i = -1; ++i < customPlotPairs.length;) {
+			if (customPlotPairs[i]) {
+				if (this.onFlowView) {
+					$("#viz" + cp_i + "-" + cnt).show();
+				} else {
+					$("#matrix-viz" + cp_i + "-custom-" + i).show();
+				}
+			}
+			++cnt;
 		}
 	}
 
 	hideAllPlots() {
 		let cp_i = this.menuClickID.checkpoint;
 		if (this.onFlowView) {
-			$("div[id^='viz" + cp_i + "-" + "']").each((i, el) => {
+			$("div[id^='viz" + cp_i + "-" + "']").each((_, el) => {
 				$(el).hide();
 			});
 		} else {
-			$("div[id^='matrix-viz" + cp_i + "-" + "']").each((i, el) => {
+			$("div[id^='matrix-viz" + cp_i + "-" + "']").each((_, el) => {
 				$(el).hide();
 			});
 		}
@@ -2813,11 +2866,11 @@ class Lab {
 	showAllPlots() {
 		let cp_i = this.menuClickID.checkpoint;
 		if (this.onFlowView) {
-			$("div[id^='viz" + cp_i + "-" + "']").each((i, el) => {
+			$("div[id^='viz" + cp_i + "-" + "']").each((_, el) => {
 				$(el).show();
 			});			
 		} else {
-			$("div[id^='matrix-viz" + cp_i + "-" + "']").each((i, el) => {
+			$("div[id^='matrix-viz" + cp_i + "-" + "']").each((_, el) => {
 				$(el).show();
 			});
 		}

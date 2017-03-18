@@ -252,7 +252,7 @@ module.exports = function(io, db) {
 
 	// Line- and column-wise overlap comparator
 	function overlaps2(range1, range2) {
-		console.log("overlaps2 range1", range1, " range2", range2);
+		//console.log("overlaps2 range1", range1, " range2", range2);
 		if (!range1 || !range2) {
 			return false;
 		}
@@ -313,7 +313,7 @@ module.exports = function(io, db) {
 	}
 
 	function commentErrorLines(obj, cb) {
-		//console.log(obj, cb);
+		console.log("316 commentErrorLines");
 		const pyprocess = cprocess.spawn('python', ['./public/python/parse_python_to_json.py', obj.code]);
 
 		// execute the code
@@ -475,6 +475,7 @@ module.exports = function(io, db) {
 	});
 
 	function runTest(lang, execFilePath, pickleFilePath, code, results, cp, cp_idx, testcase, case_idx, cb, customVars, derivedExprs) {
+		console.log("478 runTest");
 		var resSet = new Set();
 		if (customVars !== undefined) {
 			// Custom var and derived expressions could be the same
@@ -553,7 +554,7 @@ module.exports = function(io, db) {
 	}
 
 	function containsNotNullElem(node, fields) {
-		console.log("555", node, fields);
+		//console.log("555", node, fields);
 		if (node && fields)
 			for (let i = -1; ++i < fields.length;)
 				if (node[fields[i]] !== null)
@@ -561,89 +562,96 @@ module.exports = function(io, db) {
 		return false;
 	}
 
-	function collectVariables(jsonObj, range) {
+	function traverseOneStep(s, node) {
+		if (node.node.type === "Name" && node.node.id !== null)
+			s.add(node.node.id);
+		let fields = node.node["_fields"];
+		//console.log("577", "in12 fields containsNotNullElem(node, fields)", fields, containsNotNullElem(node.node, fields));
+		if (fields && fields.length > 0 && containsNotNullElem(node.node, fields)) {
+			//console.log("578", node.node);
+			let toDelete = [];
+			fields.forEach((field, i) => { // First path is array flattening
+				if (Array.isArray(node.node[field])) { // if the element is an array, not an object
+					node.node[field].forEach((subnode, j) => { // expand it
+						//console.log("584 array", field);
+						let newField = field + j;
+						node.node[newField] = subnode;
+						fields.push(newField);
+					});
+					node.node[field] = null; // kill the original node element (array)
+					toDelete.push(field);
+				} else if (node.node[field] !== null && typeof node.node[field] !== 'object') { // not an object-type (array included) data field 
+					// A little problematic. The first if case and this has overlapping conditions
+					//console.log("593 not null, not object type", field);
+					node.node[field] = null;
+					toDelete.push(field);
+				} else if (node.node[field] === null) {
+					//console.log("597 null", field);
+					toDelete.push(field);
+				} else {
+
+				}
+			});
+			fields = fields.filter(x => toDelete.indexOf(x) === -1); // .includes is not defined
+																	 // and fails silently if used
+			//console.log("602", fields);
+			node.node["_fields"] = fields; // update this change with the original node -- bubble up
+			//console.log("in13 node[\"_fields\"]", node["_fields"] );
+			let funcIdx = [];
+			for (let i = -1; ++i < fields.length;) {
+				// The only distinction necessary is
+				// whether a name is a value or a function type... right? 
+				// Or do we want that all values (including both variables
+				// and function names) to be counted?
+				//   For example, even if the len function was used in the
+				// selected block of code, we don't want to naively say that
+				// because a plot has an y-axis that's using a len function
+				// but on a variable that's not in the block of selection,
+				// that we still include that function... 
+				if (fields[i] !== "func") { // exclude all function names
+					let copy = JSON.parse(JSON.stringify(node.node)); // deep-copy
+					copy[fields[i]] = null; // kill the branch to this node
+					node.node = node.node[fields[i]]; // DFS
+					node.node.parent = copy;
+					break;
+				} else { // if this field is "func", go back to the parent -- do not go in the func node at all?
+					node.node[fields[i]] = null; // kill the branch to the "func" node
+					funcIdx.push(i);
+				}
+			}
+
+			for (let i = funcIdx.length; --i > -1;) { // funcIdx is always sorted
+				node.node.parent["_fields"].splice(funcIdx[i], 1); // Remove all the func fields
+			}
+			//console.log("635 node", node.node);
+		} else {
+			//console.log("637 node", node.node);
+			node.node = node.node.parent;
+		}
+	}
+
+	function collectVariables(jsonObj, range, lookAtEntireLocAlways) {
 		// Returns an array of variables in the range
 		// Find all the "Name" types' id of which the loc is included in range
-		let node = jsonObj;
-		node.parent = null;
+		//console.log("567", range);
+		let node = {node: jsonObj};
+		node.node.parent = null;
 		let fields = [],
 			s = new Set();
-		while (node != null) {
+		while (node.node != null) {
 			//console.log("in10 Array.from(s)", Array.from(s));
-			if (overlaps2(convertRange(node.loc), range)) {
-				//console.log("in11 node.type", node.type);
-				if (node.type === "Name" && node.id !== null)
-					s.add(node.id);
-				fields = node["_fields"];
-				console.log("577", "in12 fields containsNotNullElem(node, fields)", fields, containsNotNullElem(node, fields));
-				if (fields && fields.length > 0 && containsNotNullElem(node, fields)) {
-					console.log("578", node);
-					let toDelete = [];
-					fields.forEach((field, i) => { // First path is array flattening
-						if (Array.isArray(node[field])) { // if the element is an array, not an object
-							node[field].forEach((subnode, j) => { // expand it
-								console.log("584 array", field);
-								let newField = field + j;
-								node[newField] = subnode;
-								fields.push(newField);
-							});
-							node[field] = null; // kill the original node element (array)
-							toDelete.push(field);
-						} else if (node[field] !== null && typeof node[field] !== 'object') { // not an object-type (array included) data field 
-							// A little problematic. The first if case and this has overlapping conditions
-							console.log("593 not null, not object type", field);
-							node[field] = null;
-							toDelete.push(field);
-						} else if (node[field] === null) {
-							console.log("597 null", field);
-							toDelete.push(field);
-						} else {
-
-						}
-					});
-					fields = fields.filter(x => toDelete.indexOf(x) === -1); // .includes is not defined
-																			 // and fails silently if used
-					console.log("602", fields);
-					node["_fields"] = fields; // update this change with the original node -- bubble up
-					//console.log("in13 node[\"_fields\"]", node["_fields"] );
-					let funcIdx = [];
-					for (let i = -1; ++i < fields.length;) {
-						// The only distinction necessary is
-						// whether a name is a value or a function type... right? 
-						// Or do we want that all values (including both variables
-						// and function names) to be counted?
-						//   For example, even if the len function was used in the
-						// selected block of code, we don't want to naively say that
-						// because a plot has an y-axis that's using a len function
-						// but on a variable that's not in the block of selection,
-						// that we still include that function... 
-						if (fields[i] !== "func") { // exclude all function names
-							let copy = JSON.parse(JSON.stringify(node)); // deep-copy
-							copy[fields[i]] = null; // kill the branch to this node
-							node = node[fields[i]]; // DFS
-							node.parent = copy;
-							console.log("624", node);
-							break;
-						} else { // if this field is "func", go back to the parent -- do not go in the func node at all?
-							node[fields[i]] = null; // kill the branch to the "func" node
-							funcIdx.push(i);
-						}
-					}
-
-					for (let i = funcIdx.length; --i > -1;) { // funcIdx is always sorted
-						node.parent["_fields"].splice(funcIdx[i], 1); // Remove all the func fields
-					}
-					console.log("635 node", node);
+			if (!lookAtEntireLocAlways) {
+				if (!overlaps2(convertRange(node.node.loc), range)) {
+					//console.log("641 node", node.node);
+					//console.log("in15 no overlap");
+					// Do not overlap; no need to search in the subtree further. Prune
+					// this path immediately.
+					node.node = node.node.parent;				
 				} else {
-					console.log("637 node", node);
-					node = node.parent;
+					traverseOneStep(s, node);
 				}
 			} else {
-				console.log("641 node", node);
-				//console.log("in15 no overlap");
-				// Do not overlap; no need to search in the subtree further. Prune
-				// this path immediately.
-				node = node.parent;
+				traverseOneStep(s, node);
 			}
 		}
 		//console.log("573", Array.from(s));
@@ -688,7 +696,7 @@ module.exports = function(io, db) {
 		// Ex. if plotPairs[0][0] has x expression of "@execution step" and y expression of "len(nums)", the result of
 		// this transformation will be res[0][0] := "@execution step;len(nums)"
 		var transformed = transform(plotPairs);
-		console.log("680", transformed);
+		//console.log("680", transformed);
 		const pyprocess = cprocess.spawn('python', ['./public/python/parse_python_to_json_multiple.py', JSON.stringify(transformed)]),
 			  stdoutChunks = [],
 			  errorChunks = [];
@@ -704,8 +712,9 @@ module.exports = function(io, db) {
 				var jsonObjs = JSON.parse(bufferStr);
 				for (let i = -1; ++i < plotPairs.length;) {
 					for (let j = -1; ++j < plotPairs[i].length;) {
-						pairVars[i][j] = collectVariables(jsonObjs[i][j], convertRange(jsonObjs[i][j].loc)); // the entire location
-						console.log("696", i, j, pairVars[i][j]);
+						let lookAtEntireLocAlways = true;
+						pairVars[i][j] = collectVariables(jsonObjs[i][j], null, lookAtEntireLocAlways); // the entire location
+						//console.log("696", i, j, pairVars[i][j]);
 					}
 				}
 				return cb();
@@ -835,6 +844,7 @@ module.exports = function(io, db) {
 			if (onFlowView && !plotPairs) return res.status(200).send({});
 			if (!onFlowView && !matrixPlotPairs) return res.status(200).send({});
 
+			matrixPlotPairs.push(plotPairs[3]);
 			var pairs = onFlowView ? plotPairs : matrixPlotPairs;
 			// execute the code
 			const pyprocess = cprocess.spawn('python', ['./public/python/parse_python_to_json.py', code]),
@@ -859,7 +869,7 @@ module.exports = function(io, db) {
 
 				try {
 					jsonObj = JSON.parse(bufferStr);
-					var selectedVars = collectVariables(jsonObj, range).filter(x => x !== null); // array
+					var selectedVars = collectVariables(jsonObj, range, false).filter(x => x !== null); // array
 					//console.log("792 Array.from(selectedVars)", Array.from(selectedVars), " varNames", varNames, "pairs", pairs);
 					if (onFlowView) {					
 					} else {
