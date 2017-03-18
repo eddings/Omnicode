@@ -896,21 +896,21 @@ class Lab {
 	// Create a data object for visualization
 	/////////////////////////////////////////
 	createDebugVizData(trace) {
-		var dataArray = [];
-		var localVarNames = new Set();
+		let dataArray = [];
+		let localVarNames = new Set();
 		trace.forEach((t, i) => {
-			var orderedGlobals = t['ordered_globals'];
+			let orderedGlobals = t['ordered_globals'];
 			if (!orderedGlobals) {
 				if (t['event'] === 'uncaught_exception') {
 					return dataArray;
 				}
 			}
 
-			var stackFs = t['stack_to_render']; // Array of stack frames to render
+			let stackFs = t['stack_to_render']; // Array of stack frames to render
 			if (stackFs) {
 				stackFs.forEach((f, j) => {
-					var encodedLocalNames = Object.keys(f['encoded_locals']);
-					var stackObj = {};
+					let encodedLocalNames = Object.keys(f['encoded_locals']);
+					let stackObj = {};
 					encodedLocalNames.forEach((name, k) => {
 						if ((f['encoded_locals'][name] !== null)
 							&& !isNaN(f['encoded_locals'][name])
@@ -940,17 +940,16 @@ class Lab {
 					stackObj['@executed_code'] = this.editor.session.getLine(t['line'] - 1);
 					stackObj['@line no.'] = t['line'];
 
-					var probe_exprs = t["probe_exprs"];
+					let probe_exprs = t["probe_exprs"];
 					if (probe_exprs) {
-						//var stackObj = {};
 						Object.keys(probe_exprs).forEach((key, j) => {
 							if (Array.isArray(probe_exprs[key])) {
-								var val = parseFloat(probe_exprs[key][1]);
+								let val = parseFloat(probe_exprs[key][1]);
 								if (probe_exprs[key][0] === "SPECIAL_FLOAT" && !isNaN(val)) {
 									stackObj[key] = val;
 								}
 							} else {
-								var val = parseInt(probe_exprs[key]);
+								let val = parseInt(probe_exprs[key]);
 								if (!isNaN(val)) {
 									stackObj[key] = val;
 								}
@@ -966,8 +965,6 @@ class Lab {
 										 	  // an object
 				});
 			}
-
-		
 		});
 
 		return {dataArray: dataArray, localVarNames: localVarNames};
@@ -2038,6 +2035,7 @@ class Lab {
 				}, 2000);
 
 				var json = JSON.parse(data);
+				console.log(json);
 				if (mode === RUN_ALL_TESTS_COMMAND) {
 					this.runResults = json.results;
 				} else if (mode === RUN_TEST_COMMAND) {
@@ -2462,15 +2460,15 @@ class Lab {
 	}
 
 	removeErrorGutterHighlights() {
-		var redGutter = "redGutter";
-		this.prevSyntaxErrorRanges.forEach((range, i) => {
+		let redGutter = "redGutter";
+		this.prevSyntaxErrorRanges.forEach((range, _) => {
 			this.editor.session.removeGutterDecoration(range.start.row, redGutter);
 		});
 	}
 
 	removeCommentGutterHighlights() {
-		var commentIndicationStyle = 'greyGutter';
-		this.prevCommentRows.forEach((row, idx) => {
+		let commentIndicationStyle = 'greyGutter';
+		this.prevCommentRows.forEach((row, _) => {
 			this.editor.session.removeGutterDecoration(row, commentIndicationStyle);
 		});
 	}
@@ -2488,7 +2486,7 @@ class Lab {
 	}
 
 	completed() {
-		var done = true;
+		let done = true;
 		for (var ckpt of this.checkpoints) {
 			done &= ckpt.done;
 		}
@@ -2928,22 +2926,32 @@ class Lab {
 				// Filtering does not change. It still applies on top of variable parsing above.
 				// And it's independent of whether or not the POST request above has finished.
 				// Hence, it doesn't have to be in the success callback.
-				var exec_steps = new Set();
+				let single_line_exec_steps = new Set(),
+					multi_line_exec_steps = new Set();
 				if (this.onFlowView) {
 					d3.selectAll("[id^='viz" + cp_i + "']").select("svg")
 						.selectAll("circle")
 						.each(function(d) {
-							if (d["@line no."] - 1 === end) { exec_steps.add(d["@execution step"]); }
+							if (start === end) { // single line selection
+								if (d["@line no."] - 1 === end) { single_line_exec_steps.add(d["@execution step"]); }
+							} else { // multi line selection
+								if (start <= d["@line no."] - 1 && d["@line no."] - 1 <= end) { multi_line_exec_steps.add(d["@execution step"]); }
+							}
 						});
 				} else {
 					d3.selectAll("[id^='matrix-viz" + cp_i + "']").select("svg")
 						.selectAll("circle")
 						.each(function(d) {
-							if (d["@line no."] - 1 === end) { exec_steps.add(d["@execution step"]); }
+							if (start === end) { // single line selection
+								if (d["@line no."] - 1 === end) { single_line_exec_steps.add(d["@execution step"]); }
+							} else { // multi line selection
+								if (start <= d["@line no."] - 1 && d["@line no."] - 1 <= end) { multi_line_exec_steps.add(d["@execution step"]); }
+							}
 						});
 				}
 			
-				var exec_steps_plus_one = Array.from(exec_steps).map(x => x + 1);
+				var exec_steps_plus_one = (start === end) ? Array.from(single_line_exec_steps).map(x => x + 1)
+														  : Array.from(multi_line_exec_steps).map(x => x + 1);
 				if (this.onFlowView) {
 					d3.selectAll("[id^='viz" + cp_i + "']").select("svg")
 						.selectAll("circle").classed("hidden", function(d) {
@@ -2964,7 +2972,6 @@ class Lab {
 						});
 				}
 
-				console.log(this.plotPairs[cp_i]);
 				var dataObj = {
 					command: FILTER_PLOT_COMMAND,
 					code: this.editorObj.code,

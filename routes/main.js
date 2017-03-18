@@ -480,13 +480,13 @@ module.exports = function(io, db) {
 		if (customVars !== undefined) {
 			// Custom var and derived expressions could be the same
 			// Remove any duplicity
-			customVars.forEach((var_, i) => {
+			customVars.forEach((var_, _) => {
 				resSet.add(var_);
 			});
 		} 
 
 		if (derivedExprs !== undefined) {
-			derivedExprs.forEach((expr, i) => {
+			derivedExprs.forEach((expr, _) => {
 				resSet.add(expr);
 			});
 		}
@@ -554,7 +554,6 @@ module.exports = function(io, db) {
 	}
 
 	function containsNotNullElem(node, fields) {
-		//console.log("555", node, fields);
 		if (node && fields)
 			for (let i = -1; ++i < fields.length;)
 				if (node[fields[i]] !== null)
@@ -563,17 +562,18 @@ module.exports = function(io, db) {
 	}
 
 	function traverseOneStep(s, node) {
-		if (node.node.type === "Name" && node.node.id !== null)
+		if (node.node.type === "Name" && node.node.id) {
 			s.add(node.node.id);
+		}
+		if (node.node.type === "arg" && node.node.arg) {
+			s.add(node.node.arg);
+		}
 		let fields = node.node["_fields"];
-		//console.log("577", "in12 fields containsNotNullElem(node, fields)", fields, containsNotNullElem(node.node, fields));
 		if (fields && fields.length > 0 && containsNotNullElem(node.node, fields)) {
-			//console.log("578", node.node);
 			let toDelete = [];
 			fields.forEach((field, i) => { // First path is array flattening
 				if (Array.isArray(node.node[field])) { // if the element is an array, not an object
 					node.node[field].forEach((subnode, j) => { // expand it
-						//console.log("584 array", field);
 						let newField = field + j;
 						node.node[newField] = subnode;
 						fields.push(newField);
@@ -582,21 +582,16 @@ module.exports = function(io, db) {
 					toDelete.push(field);
 				} else if (node.node[field] !== null && typeof node.node[field] !== 'object') { // not an object-type (array included) data field 
 					// A little problematic. The first if case and this has overlapping conditions
-					//console.log("593 not null, not object type", field);
 					node.node[field] = null;
 					toDelete.push(field);
 				} else if (node.node[field] === null) {
-					//console.log("597 null", field);
 					toDelete.push(field);
 				} else {
-
 				}
 			});
 			fields = fields.filter(x => toDelete.indexOf(x) === -1); // .includes is not defined
 																	 // and fails silently if used
-			//console.log("602", fields);
 			node.node["_fields"] = fields; // update this change with the original node -- bubble up
-			//console.log("in13 node[\"_fields\"]", node["_fields"] );
 			let funcIdx = [];
 			for (let i = -1; ++i < fields.length;) {
 				// The only distinction necessary is
@@ -623,9 +618,7 @@ module.exports = function(io, db) {
 			for (let i = funcIdx.length; --i > -1;) { // funcIdx is always sorted
 				node.node.parent["_fields"].splice(funcIdx[i], 1); // Remove all the func fields
 			}
-			//console.log("635 node", node.node);
 		} else {
-			//console.log("637 node", node.node);
 			node.node = node.node.parent;
 		}
 	}
@@ -633,17 +626,13 @@ module.exports = function(io, db) {
 	function collectVariables(jsonObj, range, lookAtEntireLocAlways) {
 		// Returns an array of variables in the range
 		// Find all the "Name" types' id of which the loc is included in range
-		//console.log("567", range);
 		let node = {node: jsonObj};
 		node.node.parent = null;
 		let fields = [],
 			s = new Set();
 		while (node.node != null) {
-			//console.log("in10 Array.from(s)", Array.from(s));
 			if (!lookAtEntireLocAlways) {
 				if (!overlaps2(convertRange(node.node.loc), range)) {
-					//console.log("641 node", node.node);
-					//console.log("in15 no overlap");
 					// Do not overlap; no need to search in the subtree further. Prune
 					// this path immediately.
 					node.node = node.node.parent;				
@@ -654,7 +643,6 @@ module.exports = function(io, db) {
 				traverseOneStep(s, node);
 			}
 		}
-		//console.log("573", Array.from(s));
 		return Array.from(s);
 	}
 
@@ -696,7 +684,6 @@ module.exports = function(io, db) {
 		// Ex. if plotPairs[0][0] has x expression of "@execution step" and y expression of "len(nums)", the result of
 		// this transformation will be res[0][0] := "@execution step;len(nums)"
 		var transformed = transform(plotPairs);
-		//console.log("680", transformed);
 		const pyprocess = cprocess.spawn('python', ['./public/python/parse_python_to_json_multiple.py', JSON.stringify(transformed)]),
 			  stdoutChunks = [],
 			  errorChunks = [];
@@ -714,7 +701,6 @@ module.exports = function(io, db) {
 					for (let j = -1; ++j < plotPairs[i].length;) {
 						let lookAtEntireLocAlways = true;
 						pairVars[i][j] = collectVariables(jsonObjs[i][j], null, lookAtEntireLocAlways); // the entire location
-						//console.log("696", i, j, pairVars[i][j]);
 					}
 				}
 				return cb();
@@ -870,11 +856,7 @@ module.exports = function(io, db) {
 				try {
 					jsonObj = JSON.parse(bufferStr);
 					var selectedVars = collectVariables(jsonObj, range, false).filter(x => x !== null); // array
-					//console.log("792 Array.from(selectedVars)", Array.from(selectedVars), " varNames", varNames, "pairs", pairs);
-					if (onFlowView) {					
-					} else {
-
-					}
+					console.log("792 Array.from(selectedVars)", Array.from(selectedVars), " varNames", varNames, "pairs", pairs);
 					parseVariables(pairs, pairVars, () => {
 						for (let i = -1; ++i < pairs.length;) {
 							for (let j = -1; ++j < pairs[i].length;) {
