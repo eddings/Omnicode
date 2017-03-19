@@ -1066,9 +1066,9 @@ class Lab {
 		}
 
 		let select = this.onFlowView ? d3.selectAll("svg[id^='viz" + cp_i + "-']") : d3.selectAll("svg[id^='matrix-viz" + cp_i + "-']");
-		let brush = d3.svg.brush()		
-		    .x(x)		
-		    .y(y)		
+		let brush = d3.svg.brush() // this brush is different from the brush created in createViz(), and therefore, even if you start brushing
+		    .x(x)		           // in the custom viz and then later brushes on one of the non-custom vizzes, the brush on the custom viz
+		    .y(y)		           // still remains
 		    .on("brushstart", brushstart)
 		    .on("brush", (p) => { // Highlight the selected circles.
 				let e = brush.extent();
