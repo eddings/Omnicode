@@ -466,6 +466,22 @@ class Lab {
 		this.initStatus();
 	}
 
+	mouseReleaseOnEditorHandler() {
+		let cp_i = this.menuClickID.checkpoint;
+		d3.selectAll("[id^='viz" + cp_i + "']").select("svg")
+			.selectAll("circle").classed("hidden", false);
+
+		d3.selectAll("[id^='viz" + cp_i + "']").select("svg")
+			.selectAll("path").classed("hidden", false); // Display all data points in the comparison viz; currently not in use
+
+		d3.selectAll("[id^='matrix-viz" + cp_i + "']").select("svg")
+			.selectAll("circle").classed("hidden", false); // Matrix view 
+
+		this.removeMouseupGutterHighlights();
+		this.toggleTooltipOff();
+		this.showAllPlots();
+	}
+
 	addEditorChangeHandler() {
 		//////////////////////////////////////////////////////
 		// Debouncing and code auto save related functions
@@ -505,16 +521,14 @@ class Lab {
 		  	}
 		}
 
-		this.editor.on('change', (e) => {
-			// Remove the syntax error squiggly lines
-			this.removeMarkersInEditorSelection();
-			// Remove syntax error gutter highlights
-			this.removeErrorGutterHighlights();
-			// Remove comment gutter highlights
-			this.removeCommentGutterHighlights();
-			// Debouncing and auto saving
-			if (this.DEBOUNCE_MS > 0) {
-				$.doTimeout('editorChange', this.DEBOUNCE_MS, () => { snapshotDiff(this); });
+		this.editor.on("change", (e) => {
+			this.removeMarkersInEditorSelection(); // Remove the syntax error squiggly lines
+			this.removeErrorGutterHighlights(); // Remove syntax error gutter highlights
+			this.removeCommentGutterHighlights(); // Remove comment gutter highlights
+			this.mouseReleaseOnEditorHandler(); // Mouseup handling
+
+			if (this.DEBOUNCE_MS > 0) { // Debouncing and auto saving
+				$.doTimeout("editorChange", this.DEBOUNCE_MS, () => { snapshotDiff(this); });
 			} else {
 				snapshotDiff(this);
 			}
@@ -988,27 +1002,27 @@ class Lab {
 	createCustomVis(cp_i, varNames) {
 		if (varNames.length !== 2) { return console.log("[In createCustomVis()] Proper axes not provided."); }
 
-		var data = this.debugData.dataArray;
-		var varData = Array.from(this.debugData.localVarNames);
+		let data = this.debugData.dataArray;
+		let varData = Array.from(this.debugData.localVarNames);
 		varData.push("@line no.");
 		varData.push("@execution step");
 
-		var padding = 30,
+		let padding = 30,
 			width = 200,
 			height = 200;
 
-		var x = d3.scale.linear()
+		let x = d3.scale.linear()
 		    .range([padding / 2, width - padding / 2]);
 
-		var y = d3.scale.linear()
+		let y = d3.scale.linear()
 		    .range([height - padding / 2, padding / 2]);
 
-		var xAxis = d3.svg.axis()
+		let xAxis = d3.svg.axis()
 		    .scale(x)
 		    .orient("bottom")
 		    .ticks(6);
 
-		var yAxis = d3.svg.axis()
+		let yAxis = d3.svg.axis()
 		    .scale(y)
 		    .orient("left")
 		    .ticks(6);
@@ -1016,7 +1030,7 @@ class Lab {
 		xAxis.tickSize(width);
 		yAxis.tickSize(-height);
 
-		var domainByVarName = {};
+		let domainByVarName = {};
 		varNames.forEach(function (name) {
 			var tmpDomain = d3.extent(data, function(d) { return d[name]; });
 			if (tmpDomain[0] === tmpDomain[1]) { // If there's only value in the domain, extend it
@@ -1034,7 +1048,7 @@ class Lab {
 		this.bringUpCustomVizBackdrop(cp_i);
 
 		// Create a new one
-		var svg = d3.select("#user-defined-viz-rendered" + this.menuClickID.checkpoint)
+		let svg = d3.select("#user-defined-viz-rendered" + this.menuClickID.checkpoint)
 				    .append("svg")
 				    .attr("id", () => { return "user-defined-viz-rendered" + this.menuClickID.checkpoint + "-svg"; })
 					.attr("width", width + 2 * padding)
@@ -1051,14 +1065,25 @@ class Lab {
 			}
 		}
 
-		var brush = d3.svg.brush()		
+		let select = this.onFlowView ? d3.selectAll("svg[id^='viz" + cp_i + "-']") : d3.selectAll("svg[id^='matrix-viz" + cp_i + "-']");
+		let brush = d3.svg.brush()		
 		    .x(x)		
 		    .y(y)		
 		    .on("brushstart", brushstart)
 		    .on("brush", (p) => { // Highlight the selected circles.
-				var e = brush.extent();
-				var brushedCircleLines = new Set();
-				svg.selectAll("circle").classed("hidden", function(d) {
+				let e = brush.extent();
+				let brushedCircleLines = new Set();
+				
+				svg.selectAll("circle").classed("hidden", function(d) { // The svg itself 
+					if (e[0][0] > d[p.x] || d[p.x] > e[1][0]
+					|| e[0][1] > d[p.y] || d[p.y] > e[1][1]) {
+						return true;
+					}
+
+					brushedCircleLines.add(d["@line no."]);
+					return false;
+				});
+				select.selectAll("circle").classed("hidden", function(d) { // The svg itself 
 					if (e[0][0] > d[p.x] || d[p.x] > e[1][0]
 					|| e[0][1] > d[p.y] || d[p.y] > e[1][1]) {
 						return true;
@@ -1074,6 +1099,7 @@ class Lab {
 		    .on("brushend", () => { // If the brush is empty, select all circles.
 		    	if (brush.empty()) {
 		    		svg.selectAll(".hidden").classed("hidden", false);
+		    		select.selectAll(".hidden").classed("hidden", false);
 		    		this.removeMouseupGutterHighlights();
 		    		this.dehighlightPrevCodeLinesInDiffView();
 		    	}
@@ -1112,14 +1138,14 @@ class Lab {
 					.text(d);
 			});
 
-		var cell = svg.selectAll(".cell")
+		let cell = svg.selectAll(".cell")
 			.data(this.exclusiveCross(varNames))
 		.enter().append("g")
 			.attr("class", "cell")
 			.attr("transform", function(d, i) { return "translate(" + padding + ",0)"; });
 
-		var xVar = varNames[0];
-		var yVar = varNames[1];
+		let xVar = varNames[0];
+		let yVar = varNames[1];
 		cell.call(brush); // add brushing
 		cell.each(plot); // draw chart -- !important: this should be placed after the brush call
 		cell.selectAll("circle")
@@ -1148,13 +1174,13 @@ class Lab {
 	  			return tooltip.style("visibility", "hidden");
 	  		});
 
-		var svgContainer = d3.select("#user-defined-viz-rendered" + this.menuClickID.checkpoint);
-		var tooltip = svgContainer.append("div")
+		let svgContainer = d3.select("#user-defined-viz-rendered" + this.menuClickID.checkpoint);
+		let tooltip = svgContainer.append("div")
 							  		.style("position", "absolute")
 							  		.style("z-index", "1001")
 							  		.style("visibility", "hidden");
 
-		var brushCell;
+		let brushCell;
 
 		function plot(p) {
 			var cell = d3.select(this);
@@ -3042,19 +3068,7 @@ class Lab {
 					}
 				}
 			} else if (shouldRelease) {
-				// Dehighlight (de-filter) in the visualization
-				d3.selectAll("[id^='viz" + cp_i + "']").select("svg")
-					.selectAll("circle").classed("hidden", false);
-
-				d3.selectAll("[id^='viz" + cp_i + "']").select("svg")
-					.selectAll("path").classed("hidden", false);
-
-				d3.selectAll("[id^='matrix-viz" + cp_i + "']").select("svg")
-					.selectAll("circle").classed("hidden", false);
-
-				this.removeMouseupGutterHighlights();
-
-				this.showAllPlots();
+				this.mouseReleaseOnEditorHandler();
 			}
 		});
 
