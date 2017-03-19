@@ -920,10 +920,10 @@ class Lab {
 				}
 			}
 
-			let stackFs = t['stack_to_render']; // Array of stack frames to render
+			let stackFs = t["stack_to_render"]; // Array of stack frames to render
 			if (stackFs) {
 				stackFs.forEach((f, j) => {
-					let encodedLocalNames = Object.keys(f['encoded_locals']);
+					let encodedLocalNames = Object.keys(f["encoded_locals"]);
 					let stackObj = {};
 					encodedLocalNames.forEach((name, k) => {
 						if ((f['encoded_locals'][name] !== null)
@@ -2084,6 +2084,11 @@ class Lab {
 		let results = json.results[cp_i][tc_i][0];
 		let heapVarsObj = {};
 		let varNameSet = new Set();
+		let plotPairs = [];
+		let execution_step = "@execution step";
+
+		if (!Array.isArray(results)) { return plotPairs; }
+
 		results.forEach((res, i) => {
 			let stackF = res["stack_to_render"];
 			let heap = res["heap"];
@@ -2128,14 +2133,12 @@ class Lab {
 			}
 		});
 
-		var plotPairs = [];
-		var execution_step = "@execution step";
 		Object.keys(heapVarsObj).forEach((varName, i) => {
 			// Var names are distinctive since we overwrite3 the existing name's type with the more recent one's type
 			// in the loop above, 
-			var type = heapVarsObj[varName].type;
-			var numeric = heapVarsObj[varName].numeric;
-			var exprs = [];
+			let type = heapVarsObj[varName].type;
+			let numeric = heapVarsObj[varName].numeric;
+			let exprs = [];
 			if (type === "LIST") {
 				exprs.push("len(" + varName + ")");
 				if (numeric) exprs.push("sum(" + varName + ")");
@@ -2845,32 +2848,34 @@ class Lab {
 	}
 
 	showPlots(plotPairs) {
-		let mainPlotPairs = plotPairs.slice(0, plotPairs.length - 1);
-		let cp_i = this.menuClickID.checkpoint;
-		let cnt = 0;
-		for (let i = -1; ++i < mainPlotPairs.length;) {
-			for (let j = -1; ++j < mainPlotPairs[i].length;) {
-				if (plotPairs[i][j]) {
+		if (Array.isArray(plotPairs)) {
+			let mainPlotPairs = plotPairs.slice(0, plotPairs.length - 1);
+			let cp_i = this.menuClickID.checkpoint;
+			let cnt = 0;
+			for (let i = -1; ++i < mainPlotPairs.length;) {
+				for (let j = -1; ++j < mainPlotPairs[i].length;) {
+					if (plotPairs[i][j]) {
+						if (this.onFlowView) {
+							$("#viz" + cp_i + "-" + cnt).show();
+						} else {
+							$("#matrix-viz" + cp_i + "-" + this.vizMatrixPad(cp_i, cnt)).show();
+						}
+					}
+					++cnt;
+				}
+			}
+
+			let customPlotPairs = plotPairs.slice(plotPairs.length - 1)[0];
+			for (let i = -1; ++i < customPlotPairs.length;) {
+				if (customPlotPairs[i]) {
 					if (this.onFlowView) {
 						$("#viz" + cp_i + "-" + cnt).show();
 					} else {
-						$("#matrix-viz" + cp_i + "-" + this.vizMatrixPad(cp_i, cnt)).show();
+						$("#matrix-viz" + cp_i + "-custom-" + i).show();
 					}
 				}
 				++cnt;
-			}
-		}
-
-		let customPlotPairs = plotPairs.slice(plotPairs.length - 1)[0];
-		for (let i = -1; ++i < customPlotPairs.length;) {
-			if (customPlotPairs[i]) {
-				if (this.onFlowView) {
-					$("#viz" + cp_i + "-" + cnt).show();
-				} else {
-					$("#matrix-viz" + cp_i + "-custom-" + i).show();
-				}
-			}
-			++cnt;
+			}			
 		}
 	}
 

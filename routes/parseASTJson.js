@@ -16,13 +16,15 @@ module.exports = function JsonASTParser() {
 				functionRanges.push(loc);
 			}
 
-			jsonObj['_fields'].forEach((field, i) => {
-				if (Object.prototype.toString.call(jsonObj[field]) === '[object Array]') {
-					jsonObj[field].forEach((subfield, j) => {
-						helper(subfield, functionRanges);
-					});
-				}
-			});
+			if (Array.isArray(jsonObj["_fields"])) {
+				jsonObj['_fields'].forEach((field, _) => {
+					if (Object.prototype.toString.call(jsonObj[field]) === '[object Array]') {
+						jsonObj[field].forEach((subfield, _) => {
+							helper(subfield, functionRanges);
+						});
+					}
+				});
+			}
 		}
 
 		var res = [];
