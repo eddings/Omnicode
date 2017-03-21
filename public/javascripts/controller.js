@@ -188,6 +188,7 @@ class Lab {
 		this.varNames = [];
 		this.onMatrixView = true;
 		this.onFlowView = false;
+		this.runStatus = $("#run-status");
 
 		// PythonTutor Viz Tooltip
 		this.textSelected = false;
@@ -286,7 +287,7 @@ class Lab {
 		let cols = Math.max(isNaN(this.matrixPlotPairs[cp_i][0][0].length) ? 0 : this.matrixPlotPairs[cp_i][0][0].length, 5),
 			width = 200,
 			height = 200,
-			padding = 30,
+			padding = 40,
 			dEl = document.createElement("div");
 
 		dEl.className = "cellDiv";
@@ -336,7 +337,7 @@ class Lab {
 		let cols = 5,
 			width = 200,
 			height = 200,
-			padding = 30,
+			padding = 40,
 			dEl = document.createElement("div");
 
 		dEl.className = "cellDiv";
@@ -1007,7 +1008,7 @@ class Lab {
 		varData.push("@line no.");
 		varData.push("@execution step");
 
-		let padding = 30,
+		let padding = 40,
 			width = 200,
 			height = 200;
 
@@ -1202,7 +1203,7 @@ class Lab {
 			  .filter(function(d) { return (d[p.x] !== undefined) && (d[p.y] !== undefined); })
 			    .attr("cx", function(d) { return x(d[p.x]); })
 			    .attr("cy", function(d) { return y(d[p.y]); })
-			    .attr("r", 2)
+			    .attr("r", 4)
 			    .style("fill", d3.rgb(255,127,80,0.2));
 		}
 	}
@@ -1319,7 +1320,7 @@ class Lab {
 		cols = Math.max(cols, 5);
 		let width = 200,
 			height = 200,
-			padding = 30,
+			padding = 40,
 			dEl = document.createElement("div");
 
 		dEl.className = "cellDiv";
@@ -1409,7 +1410,7 @@ class Lab {
 			rows = Math.ceil(this.checkpointVizNumber[cp_i] / cols),
 			width = 200,
 			height = 200,
-			padding = 30,
+			padding = 40,
 			dEl = document.createElement("div");
 
 		dEl.className = "cellDiv";
@@ -1429,9 +1430,9 @@ class Lab {
 			"viz-custom-value-custom-value" + cp_i
 		];
 		var titles = [
-			"Local variable - execution step plot(s)",
+			"Variable - execution step plot(s)",
 			"Derived variable - execution step plot(s)",
-			"Local variable - local variable plot(s)",
+			"Variable - variable plot(s)",
 			"Custom variable - custom variable plot(s)"
 		];
 		var pDiv = document.getElementById("viz" + cp_i);
@@ -1539,7 +1540,7 @@ class Lab {
 
 		var width = 200,
 			height = 200,
-			padding = 30;
+			padding = 40;
 
 		var domainByVarName = {};
 
@@ -1555,6 +1556,7 @@ class Lab {
 		varData.push("@line no.");
 		varData.push("@execution step");
 		varData = varData.concat(derivedExprPairs.map((e) => e.y));
+		varData = varData.concat(this.plotPairs[cp_i][3].map((e) => e.y));
 		varData.forEach(function (name) {
 			var tmpDomain = d3.extent(data, function(d) { return d[name]; });
 			if (tmpDomain[0] === tmpDomain[1]) { // If there's only value in the domain, extend it
@@ -1795,7 +1797,7 @@ class Lab {
 			  .filter(function(d) { return (d[p.x] !== undefined) && (d[p.y] !== undefined) && d["@current"]; })
 			    .attr("cx", function(d) { return x(d[p.x]); })
 			    .attr("cy", function(d) { return y(d[p.y]); })
-			    .attr("r", 2)
+			    .attr("r", 4)
 			    .style("fill", function(d) { return d3.rgb(255,127,80,0.2); });
 		}
 	}
@@ -2056,8 +2058,10 @@ class Lab {
 			data: JSON.stringify(dataObj),
 			success: (data) => {
 				$("#state" + cp_idx + "-" + tc_idx).html("<i>Done</i>"); // checkpoint status
+				this.runStatus.html("<i>Done</i>");
 				setTimeout(() => {
 					$("#state" + cp_idx + "-" + tc_idx).fadeOut();
+					this.runStatus.fadeOut();
 				}, 2000);
 
 				var json = JSON.parse(data);
@@ -2176,7 +2180,6 @@ class Lab {
 			data: JSON.stringify(dataObj),
 			success: (data) => {
 				var json = JSON.parse(data);
-				console.log(json);
 				this.derivedExprPairs = this.deriveExprs(cp_i, tc_i, json);
 				dataObj.derivedExprs = this.derivedExprPairs.map((e) => e.y);
 				$.post({
@@ -2184,9 +2187,12 @@ class Lab {
 					data: JSON.stringify(dataObj),
 					success: (data) => {
 						json = JSON.parse(data);
+						console.log(json);
 						$("#state" + cp_i + "-" + tc_i).html("<i>Done</i>");
+						this.runStatus.html("<i>Done</i>");
 						setTimeout(() => {
 							$("#state" + cp_i + "-" + tc_i).fadeOut();
+							this.runStatus.fadeOut();
 						}, 2000);
 						// Set gutter highlight (red) to indicate syntax error
 						//this.highlightSyntaxErrors(json.syntaxErrorRanges);
@@ -2304,11 +2310,14 @@ class Lab {
 		};
 		// Show the test case state span
 		$("#state" + cp_i + "-" + tc_i).css("display", "inline");
+		this.runStatus.css("display", "inline");
 
 		if (mode === RUN_ALL_TESTS_COMMAND) {
 			$("#state" + cp_i + "-" + tc_i).html("<i>Running ... </i>");
+			this.runStatus.html("<i>Running ... </i>");
 		} else if (mode === RUN_TEST_COMMAND) {
 			$("#state" + cp_i + "-" + tc_i).html("<i>Running ... </i>");
+			this.runStatus.html("<i>Running ... </i>");
 		}
 
 		if (newCustomVars.length === 0)
@@ -2915,25 +2924,24 @@ class Lab {
 		//   filter
 		$("#editor").mouseup((e) => {
 			e.preventDefault();
+			let cp_i = this.menuClickID.checkpoint;
+			let tc_i = this.menuClickID.testcase;
 
-			var cp_i = this.menuClickID.checkpoint;
-			var tc_i = this.menuClickID.testcase;
+			let line_idx = [this.editor.selection.getRange().start.row, this.editor.selection.getRange().end.row];
+			let start = line_idx[0];
+			let end = line_idx[1];
 
-			var line_idx = [this.editor.selection.getRange().start.row, this.editor.selection.getRange().end.row];
-			var start = line_idx[0];
-			var end = line_idx[1];
-
-			var textSelected = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange()) !== "";
+			let textSelected = this.editor.getSession().doc.getTextRange(this.editor.selection.getRange()) !== "";
 			this.textSelected = textSelected;
-			var isOneLine = start === end;
-			var clickMadeInPrevRangeNext = this.convertToIndexArray(line_idx).every((v, i) => v === this.isMouseupHighlightedLineIndices[i]);
+			let isOneLine = start === end;
+			let clickMadeInPrevRangeNext = this.convertToIndexArray(line_idx).every((v, i) => v === this.isMouseupHighlightedLineIndices[i]);
 
-			var shouldFilter = textSelected && !this.isMouseupHighlighted;
+			let shouldFilter = textSelected && !this.isMouseupHighlighted;
 			// !textSelected && isOneLine will hold in a normal situation with clicking on a line in the editor
 			// this.isMouseupHighlighted && clickMadeInPrevRangeNext is necessary since there's a DOM event
 			// mismatch within the editor it seems. When a mouse click happens in the range of a previously
 			// selected range, it will still return the same range of text as selected, which isn't true.
-			var shouldRelease = (!textSelected && isOneLine) || (this.isMouseupHighlighted && clickMadeInPrevRangeNext);
+			let shouldRelease = (!textSelected && isOneLine) || (this.isMouseupHighlighted && clickMadeInPrevRangeNext);
 
 			if (shouldFilter) {
 				// When there's a selection range and a mouse click happens
@@ -2981,7 +2989,7 @@ class Lab {
 						});
 				}
 			
-				var exec_steps_plus_one = (start === end) ? Array.from(single_line_exec_steps).map(x => x + 1)
+				let exec_steps_plus_one = (start === end) ? Array.from(single_line_exec_steps).map(x => x + 1)
 														  : Array.from(multi_line_exec_steps).map(x => x + 1);
 				if (this.onFlowView) {
 					d3.selectAll("[id^='viz" + cp_i + "']").select("svg")
@@ -3003,7 +3011,7 @@ class Lab {
 						});
 				}
 
-				var dataObj = {
+				let dataObj = {
 					command: FILTER_PLOT_COMMAND,
 					code: this.editorObj.code,
 					range: {
@@ -3053,8 +3061,8 @@ class Lab {
 
 					this.tooltip.html(""); // Clean up the previous visualization
 					exec_steps_plus_one.forEach((step, i) => {
-						var id = "PythonTutor-viz-div-" + i;
-						var div = document.createElement("div");
+						let id = "PythonTutor-viz-div-" + i;
+						let div = document.createElement("div");
 						div.id = id;
 						this.tooltip.append(div);
 						addVisualizerToPage(
@@ -3067,7 +3075,7 @@ class Lab {
 						);
 					});
 					// Adjust the height of the tooltip to fit in the screen
-					var hPadding = 20;
+					let hPadding = 20;
 					if (this.tooltip.height() + this.tooltip.offset().top > $(window).height()) {
 						this.tooltip.height($(window).height() - this.tooltip.offset().top - hPadding);
 					}
@@ -3080,7 +3088,7 @@ class Lab {
 		$("#diff-code-panel").mouseup((e) => {
 			// The semantics of selection in the diff panel maybe doesn't really make sense
 			e.preventDefault();
-			var code = "";
+			let code = "";
 			if (window.getSelection) { code = window.getSelection().toString(); }
 			else if (document.selection && document.selection.type !== "Control") {
 				code = document.selection.createRange().text;
@@ -3093,9 +3101,9 @@ class Lab {
 		document.addEventListener("click", (e) => {
 			//e.preventDefault();
 
-			var parentTestcaseHTMLDivArray = $(e.target).parents("div[id^='testcase-list-item']");
+			let parentTestcaseHTMLDivArray = $(e.target).parents("div[id^='testcase-list-item']");
 			if (parentTestcaseHTMLDivArray && parentTestcaseHTMLDivArray.length !== 0) {
-				var parentDiv = parentTestcaseHTMLDivArray[0];
+				let parentDiv = parentTestcaseHTMLDivArray[0];
 				// Dehighlight the previous selection
 				this.dehighlightBackdrop(document.getElementById(
 					"testcase-list-item" + this.menuClickID.checkpoint + "-" + this.menuClickID.testcase
@@ -3104,9 +3112,9 @@ class Lab {
 				// Highlight the new selection
 				this.highlightBackdrop(parentDiv);
 
-				var nums = parentDiv.id.split("testcase-list-item")[1].split("-");
-				var cp_idx = nums[0];
-				var tc_idx = nums[1];
+				let nums = parentDiv.id.split("testcase-list-item")[1].split("-");
+				let cp_idx = nums[0];
+				let tc_idx = nums[1];
 
 				this.menuClickID = {checkpoint: cp_idx, testcase: tc_idx};
 

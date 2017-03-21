@@ -13,7 +13,7 @@ S'\n# Compute the difference between mean and median of a given list of numbers\
 p6
 sS'filename'
 p7
-S'./labs/MeanMedianDiff\\meanMedianDiff.py'
+S'./labs/diffMeanMedian\\meanMedianDiff.py'
 p8
 sS'lineno'
 p9

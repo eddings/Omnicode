@@ -475,13 +475,12 @@ module.exports = function(io, db) {
 	});
 
 	function runTest(lang, execFilePath, pickleFilePath, code, results, cp, cp_idx, testcase, case_idx, cb, customVars, derivedExprs) {
-		console.log("478 runTest");
 		var resSet = new Set();
 		if (customVars !== undefined) {
 			// Custom var and derived expressions could be the same
 			// Remove any duplicity
-			customVars.forEach((var_, _) => {
-				resSet.add(var_);
+			customVars.forEach((varName, _) => {
+				resSet.add(varName);
 			});
 		} 
 
@@ -492,6 +491,7 @@ module.exports = function(io, db) {
 		}
 
 		var customPlusDerivedExprs = Array.from(resSet);
+		console.log(customPlusDerivedExprs);
 		var execProcess = cprocess.spawn(lang, [execFilePath, pickleFilePath, cp.name, case_idx, code, JSON.stringify(customPlusDerivedExprs)]);
 		var errChunks = [];
 		var resultChunks = [];
