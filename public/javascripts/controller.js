@@ -1203,7 +1203,7 @@ class Lab {
 			  .filter(function(d) { return (d[p.x] !== undefined) && (d[p.y] !== undefined); })
 			    .attr("cx", function(d) { return x(d[p.x]); })
 			    .attr("cy", function(d) { return y(d[p.y]); })
-			    .attr("r", 4)
+			    .attr("r", 3)
 			    .style("fill", d3.rgb(255,127,80,0.2));
 		}
 	}
@@ -1797,7 +1797,7 @@ class Lab {
 			  .filter(function(d) { return (d[p.x] !== undefined) && (d[p.y] !== undefined) && d["@current"]; })
 			    .attr("cx", function(d) { return x(d[p.x]); })
 			    .attr("cy", function(d) { return y(d[p.y]); })
-			    .attr("r", 4)
+			    .attr("r", 3)
 			    .style("fill", function(d) { return d3.rgb(255,127,80,0.2); });
 		}
 	}
