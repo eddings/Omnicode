@@ -3060,6 +3060,7 @@ class Lab {
 					this.positionMenu(e);
 
 					this.tooltip.html(""); // Clean up the previous visualization
+
 					exec_steps_plus_one.forEach((step, i) => {
 						let id = "PythonTutor-viz-div-" + i;
 						let div = document.createElement("div");

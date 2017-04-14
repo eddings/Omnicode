@@ -1,2 +1,2 @@
-# Labyrinth
-Labyrinth: Linking Code, Exposition, and Real-Time Help in Interactive Code Labs
+# Omnicode
+Omnicode: Always-On Run-Time Value Visualizations for Novice Programmers
