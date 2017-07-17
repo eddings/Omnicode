@@ -1052,9 +1052,9 @@ class Lab {
 		let svg = d3.select("#user-defined-viz-rendered" + this.menuClickID.checkpoint)
 				    .append("svg")
 				    .attr("id", () => { return "user-defined-viz-rendered" + this.menuClickID.checkpoint + "-svg"; })
-					.attr("width", width + 2 * padding)
-					.attr("height", height + 2 * padding)
-					.attr("transform", function(d, i) { return "translate(" + padding + "," + padding +")"; });
+						.attr("width", width + 2 * padding)
+						.attr("height", height + 2 * padding)
+						.attr("transform", function(d, i) { return "translate(" + padding + "," + padding +")"; });
 
 		// Clear the previously-active brush, if any.
 		function brushstart(p) {
@@ -1072,30 +1072,30 @@ class Lab {
 		    .y(y)		           // still remains
 		    .on("brushstart", brushstart)
 		    .on("brush", (p) => { // Highlight the selected circles.
-				let e = brush.extent();
-				let brushedCircleLines = new Set();
-				
-				svg.selectAll("circle").classed("hidden", function(d) { // The svg itself 
-					if (e[0][0] > d[p.x] || d[p.x] > e[1][0]
-					|| e[0][1] > d[p.y] || d[p.y] > e[1][1]) {
-						return true;
-					}
+					let e = brush.extent();
+					let brushedCircleLines = new Set();
+					svg.selectAll("circle").classed("hidden", function(d) { // The svg itself 
+						if (e[0][0] > d[p.x] || d[p.x] > e[1][0]
+						|| e[0][1] > d[p.y] || d[p.y] > e[1][1]) {
+							return true;
+						}
 
-					brushedCircleLines.add(d["@line no."]);
-					return false;
-				});
-				select.selectAll("circle").classed("hidden", function(d) { // The svg itself 
-					if (e[0][0] > d[p.x] || d[p.x] > e[1][0]
-					|| e[0][1] > d[p.y] || d[p.y] > e[1][1]) {
-						return true;
-					}
+						brushedCircleLines.add(d["@line no."]);
+						return false;
+					});
+					select.selectAll("circle").classed("hidden", function(d) { // The svg itself 
+						if (!d[p.x] || !d[p.y]
+							|| e[1][0] < d[p.x] || d[p.x] < e[0][0]
+							|| e[1][1] < d[p.y] || d[p.y] < e[0][1]) { // Hide the circles
+							return true;
+						}
 
-					brushedCircleLines.add(d["@line no."]);
-					return false;
-				});
+						brushedCircleLines.add(d["@line no."]);
+						return false;
+					});
 
-				this.removeMouseupGutterHighlights();
-				this.highlightCodeLines(Array.from(brushedCircleLines));
+					this.removeMouseupGutterHighlights();
+					this.highlightCodeLines(Array.from(brushedCircleLines));
 		    })
 		    .on("brushend", () => { // If the brush is empty, select all circles.
 		    	if (brush.empty()) {
@@ -1587,28 +1587,37 @@ class Lab {
 				    .y(y)
 				    .on("brushstart", brushStart)
 				    .on("brush", (p) => { // Highlight the selected circles.
-						var e = brush.extent();
-						var brushedCircleLines1 = new Set();
-						var brushedCircleLines2 = new Set();
-						var select = this.onFlowView ? d3.selectAll("svg[id^='viz" + cp_i + "-']") : d3.selectAll("svg[id^='matrix-viz" + cp_i + "-']");
-						select.selectAll("circle").classed("hidden", function(d) {
-							// NOTE: e[0][0] = x0, e[0][1] = y0, e[1][0] = x1, e[1][1] = y1,
-							// 		 where [x0, y0] is the top-left corner
-							// 		 and [x1, y1] is the bottom-right corner
-							if (e[0][0] > d[p.x] || d[p.x] > e[1][0]
-							|| e[0][1] > d[p.y] || d[p.y] > e[1][1]) {
-								// Hide the circles
-								return true;
-							}
+							var e = brush.extent();
+							var brushedCircleLines1 = new Set();
+							var brushedCircleLines2 = new Set();
+							var select = this.onFlowView ? d3.selectAll("svg[id^='viz" + cp_i + "-']") : d3.selectAll("svg[id^='matrix-viz" + cp_i + "-']");
+							select.selectAll("circle").classed("hidden", function(d) {
+								// NOTE: e[0][0] = x0, e[0][1] = y0, e[1][0] = x1, e[1][1] = y1,
+								// 		 where [x0, y0] is the top-left corner
+								// 		 and [x1, y1] is the bottom-right corner <-- wrong
+								// e[0]: bottom lefthand corner, e[1]: top righthand corner
+								// e[0][0]: x, e[0][1]: y, e[1][0]: x, e[1][1]: y
+								console.log(e[0], e[1], d[p.x], d[p.y], d, p.x, p.y);
+								if (!d[p.x] || !d[p.y]
+									|| e[1][0] < d[p.x] || d[p.x] < e[0][0]
+									|| e[1][1] < d[p.y] || d[p.y] < e[0][1]) { // Hide the circles
+									return true;
+								}
+								/*
+								if (e[0][0] > d[p.x] || d[p.x] > e[1][0]
+								|| e[0][1] < d[p.y] || d[p.y] < e[1][1]) {
+									// Hide the circles
+									return true;
+								}
+								*/
+								d["@current"] ? brushedCircleLines1.add(d["@line no."])
+											  : brushedCircleLines2.add(d["@line no."]);
+								return false;
+							});
 
-							d["@current"] ? brushedCircleLines1.add(d["@line no."])
-										  : brushedCircleLines2.add(d["@line no."]);
-							return false;
-						});
-
-						this.removeMouseupGutterHighlights();
-						this.highlightCodeLines(Array.from(brushedCircleLines1));
-						this.highlightCodeLinesInDiffView(Array.from(brushedCircleLines2));
+							this.removeMouseupGutterHighlights();
+							this.highlightCodeLines(Array.from(brushedCircleLines1));
+							this.highlightCodeLinesInDiffView(Array.from(brushedCircleLines2));
 				    })
 				    .on("brushend", (p) => { // If the brush is empty, select all circles.
 				    	if (brush.empty()) {
