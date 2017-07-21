@@ -32,13 +32,17 @@ def fibonacci(n):
     3
     >>> print fibonacci(4)
     5
+    >>> print fibonacci(5)
+    8
+    >>> print fibonacci(6)
+    13
+    >>> print fibonacci(7)
+    21
+    >>> print fibonacci(8)
+    34
     >>> print fibonacci(9)
     55
     >>> print fibonacci(10)
     89
-    >>> print fibonacci(12)
-    233
-    >>> print fibonacci(20)
-    10946
     """
     pass

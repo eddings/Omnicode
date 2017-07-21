@@ -36,9 +36,5 @@ def fibonacci(n):
     55
     >>> print fibonacci(10)
     89
-    >>> print fibonacci(12)
-    233
-    >>> print fibonacci(20)
-    10946
     """
     pass

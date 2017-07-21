@@ -13,7 +13,7 @@ S'\n\n# Some small programming problems\n\n- Difference between mean and median 
 p6
 sS'filename'
 p7
-S'./labs/problems\\smallProblems.py'
+S'./labs/SmallProblems\\smallProblems.py'
 p8
 sS'lineno'
 p9
